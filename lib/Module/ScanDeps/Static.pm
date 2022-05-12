@@ -846,8 +846,6 @@ module currently installed if there is no version specified.
 
 default: B<false>
 
-=back
-
 =item separator
 
 Character string to use formatting dependency list as text. This
@@ -856,6 +854,8 @@ string will be used to separate the module name from the version.
 default: ' => '
 
  Module::ScanDeps::Static 0.1
+
+=back
 
 =head2 get_require
 

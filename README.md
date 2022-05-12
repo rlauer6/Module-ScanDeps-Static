@@ -247,15 +247,3 @@ This statement was lifted right from `perl.req`...
 >
 > _Any questions regarding the licensing of RPM should be addressed to
 > Erik Troan &lt;ewt@redhat.com_.>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 851:
-
-    '=item' outside of any '=over'
-
-- Around line 860:
-
-    You forgot a '=back' before '=head2'
