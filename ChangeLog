@@ -1,0 +1,14 @@
+Mon May  9 12:35:04 2022  Rob Lauer  <rlauer6@comcast.net>
+
+	[BigBang]:
+	* Makefile: new
+	* .gitignore: new
+	* provides: new
+	* requires: new
+	* lib/Module/ScanDeps/Static.pm: new
+	* bin/scandeps-static.pl: new
+	* README.md: new
+	* ChangeLog: new
+	* t/00-scandeps.t: new
+	* t/01-scandeps.t: new
+
