@@ -1,12 +1,3 @@
-Carp 1.50
 Class::Accessor::Fast 0.51
-Data::Dumper 2.170
-English 1.10
-ExtUtils::MM 7.34
-Getopt::Long 2.5
-JSON::PP 2.97001
-Module::CoreList 5.20181129_28
-parent 0.236
+IO::Scalar 2.111
 Readonly 2.05
-strict 1.11
-warnings 1.42

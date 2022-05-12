@@ -1,3 +1,17 @@
+Thu May 12 14:08:57 2022  Rob Lauer  <rlauer6@comcast.net>
+
+	[output formatting]:
+	* lib/Module/ScanDeps/Static.pm
+	- help
+	- + --separator, --raw, --version
+	(add_require): trim module names
+	(get_dependencies): no method 'format', use get_json, get_text
+	(format_text): format ala scandeps.pl
+	* Makefile
+	- new targets: check, test, install
+	* requires: +IO::Scalar
+	* bin/scandeps-static.pl: bump version
+
 Thu May 12 10:08:34 2022  Rob Lauer  <rlauer6@comcast.net>
 
 	[__DATA__]:

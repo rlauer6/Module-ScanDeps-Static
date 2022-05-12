@@ -3,7 +3,7 @@ package Module::ScanDeps::Static;
 use strict;
 use warnings;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use 5.010;
 
@@ -14,14 +14,21 @@ use ExtUtils::MM;
 use Getopt::Long;
 use JSON::PP;
 use Module::CoreList;
+use Pod::Usage;
+use Pod::Find qw{ pod_where };
 use Readonly;
 use IO::Scalar;
+use List::Util qw{ max };
 
 use parent qw{ Class::Accessor::Fast };
 
 __PACKAGE__->follow_best_practice;
 __PACKAGE__->mk_accessors(
-  qw{ handle include_require core add_version perlreq require path });
+  qw{
+    json raw text handle include_require core
+    add_version perlreq require path separator
+  }
+);
 
 # booleans
 Readonly my $TRUE  => 1;
@@ -32,10 +39,12 @@ Readonly my $SUCCESS => 0;
 Readonly my $FAILURE => 1;
 
 # chars
-Readonly my $SPACE        => q{ };
-Readonly my $EMPTY        => q{};
-Readonly my $SLASH        => q{/};
+Readonly my $COMMA        => q{,};
 Readonly my $DOUBLE_COLON => q{::};
+Readonly my $EMPTY        => q{};
+Readonly my $NEWLINE      => qq{\n};
+Readonly my $SLASH        => q{/};
+Readonly my $SPACE        => q{ };
 
 our $HAVE_VERSION = eval {
   require version;
@@ -109,8 +118,8 @@ sub get_module_version {
   $module_version{'file'} = $self->make_path_from_module($module);
 
   foreach my $prefix (@include_path) {
-    my $path = $prefix . $SLASH . $module_version{'file'};
 
+    my $path = $prefix . $SLASH . $module_version{'file'};
     next if !-e $path;
 
     $module_version{'path'} = $path;
@@ -405,7 +414,7 @@ sub parse {
     $self->set_handle( IO::Scalar->new($script) );
   }
   elsif ( !$self->get_handle ) {
-    open my $fh, '<&STDIN'
+    open my $fh, '<&STDIN'     ## no critic (InputOutput::RequireBriefOpen)
       or croak 'could not open STDIN';
 
     $self->set_handle($fh);
@@ -467,6 +476,9 @@ sub parse {
 sub add_require {
 ########################################################################
   my ( $self, $module, $newver ) = @_;
+
+  $module =~ s/\A\s*//xsm;
+  $module =~ s/\s*\z//xsm;
 
   my $require = $self->get_require;
 
@@ -538,10 +550,10 @@ sub get_dependencies {
 ########################################################################
   my ( $self, %options ) = @_;
 
-  if ( $options{'format'} eq 'json' ) {
+  if ( $self->get_json ) {
     return scalar $self->format_json;
   }
-  elsif ( $options{'format'} eq 'text' ) {
+  elsif ( $self->get_text || $self->get_raw ) {
     return $self->format_text;
   }
   else {
@@ -558,14 +570,28 @@ sub format_text {
 
   my $str = $EMPTY;
 
+  my $max_len = 2 + max map { length $_->{'name'} } @requirements;
+
+  my @output;
+
   foreach my $module (@requirements) {
     my ( $name, $version ) = @{$module}{qw{ name version }};
 
-    $str .= sprintf "%s%s%s\n", $name, ( $version ? ' >= ' : $EMPTY ),
-      $version;
+    my $separator = $self->get_separator;
+    my $format    = "%-${max_len}s%s'%s',";
+
+    if ( $self->get_raw ) {
+      $separator = $SPACE;
+      $format    = "%-${max_len}s%s%s";
+    }
+    else {
+      $name = "'$name'";
+    }
+
+    push @output, sprintf $format, $name, $separator, $version // $EMPTY;
   } ## end foreach my $module (@requirements)
 
-  return $str;
+  return join $NEWLINE, @output, $EMPTY;
 } ## end sub format_text
 
 ########################################################################
@@ -618,10 +644,35 @@ sub main {
     'include-require' => $TRUE,
     'json'            => $FALSE,
     'text'            => $TRUE,
+    'separator'       => q{ => },
+
   );
 
-  GetOptions( \%options, 'json|j', 'text|t', 'core!', 'add-version|a',
-    'include-require|r', 'help|h' );
+  GetOptions(
+    \%options,       'json|j',
+    'text|t',        'core!',
+    'add-version|a', 'include-require|i',
+    'help|h',        'separator|s=s',
+    'version|v',     'raw|r',
+  );
+
+  if ( $options{'version'} ) {
+    pod2usage(
+      -exitval  => 1,
+      -input    => pod_where( { -inc => 1 }, __PACKAGE__ ),
+      -sections => 'VERSION',
+      -verbose  => 99,
+    );
+  } ## end if ( $options{'version'...})
+
+  if ( $options{'help'} ) {
+    pod2usage(
+      -exitval  => 1,
+      -input    => pod_where( { -inc => 1 }, __PACKAGE__ ),
+      -sections => 'USAGE|VERSION',
+      -verbose  => 99,
+    );
+  } ## end if ( $options{'help'} )
 
   $options{'path'} = shift @ARGV;
 
@@ -671,6 +722,53 @@ C<parent>, and C<base> in all of their disguised forms inside your
 Perl script or module.  It's not perfect and the regular expressions
 could use some polishing, but it works on a broad enough set of
 situations as to be useful.
+
+=head1 USAGE
+
+scandeps-static.pl [options] Module
+
+=head2 Options
+
+=over 5
+
+=item --add-version, -a
+
+Add the version number to the dependency by inspecting the version of
+the module in your @INC path.
+
+=item --core, -c, --no-core
+
+Include or exclude core modules.
+
+=item --help, -h
+
+Show usage.
+
+=item --include-require, -i
+
+Include statements that have C<Require> in them but are not
+necessarily on the left edge of the code (possibly in tests).
+
+=item --json, -j
+
+Output the dependency list as a JSON encode string.
+
+=item --separator, -s
+
+Use the specified sting to separate modules and version numbers.  The
+defualt is ' => '.
+
+=item --text, -t
+
+Output the dependency list as a simple text listing of module name and
+version in the same manner as C<scandeps.pl>.
+
+=item --raw, -r
+
+Output the list with no quotes separated by a single whitespace
+character.
+
+=back
 
 =head1 WHAT IS A DEPENDENCY?
 
@@ -750,6 +848,15 @@ default: B<false>
 
 =back
 
+=item separator
+
+Character string to use formatting dependency list as text. This
+string will be used to separate the module name from the version.
+
+default: ' => '
+
+ Module::ScanDeps::Static 0.1
+
 =head2 get_require
 
 After calling the C<parse()> method, call this method to retrieve a
@@ -817,6 +924,10 @@ As JSON:
 In scalar context in the absence of an argument returns a JSON
 formatted string. In list context will return a list of hashes that
 contain the keys "name" and "version" for each dependency.
+
+=head1 VERSION
+
+0.2
 
 =head1 AUTHOR
 

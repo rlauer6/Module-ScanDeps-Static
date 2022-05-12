@@ -26,6 +26,49 @@ Perl script or module.  It's not perfect and the regular expressions
 could use some polishing, but it works on a broad enough set of
 situations as to be useful.
 
+# USAGE
+
+scandeps-static.pl \[options\] Module
+
+## Options
+
+- --add-version, -a
+
+    Add the version number to the dependency by inspecting the version of
+    the module in your @INC path.
+
+- --core, -c, --no-core
+
+    Include or exclude core modules.
+
+- --help, -h
+
+    Show usage.
+
+- --include-require, -i
+
+    Include statements that have `Require` in them but are not
+    necessarily on the left edge of the code (possibly in tests).
+
+- --json, -j
+
+    Output the dependency list as a JSON encode string.
+
+- --separator, -s
+
+    Use the specified sting to separate modules and version numbers.  The
+    defualt is ' => '.
+
+- --text, -t
+
+    Output the dependency list as a simple text listing of module name and
+    version in the same manner as `scandeps.pl`.
+
+- --raw, -r
+
+    Output the list with no quotes separated by a single whitespace
+    character.
+
 # WHAT IS A DEPENDENCY?
 
 For the purposes of this module, dependencies are identified by
@@ -96,6 +139,15 @@ Returns a `Module::ScanDeps::Static` object.
 
     default: **false**
 
+- separator
+
+    Character string to use formatting dependency list as text. This
+    string will be used to separate the module name from the version.
+
+    default: ' => '
+
+        Module::ScanDeps::Static 0.1
+
 ## get\_require
 
 After calling the `parse()` method, call this method to retrieve a
@@ -161,6 +213,10 @@ In scalar context in the absence of an argument returns a JSON
 formatted string. In list context will return a list of hashes that
 contain the keys "name" and "version" for each dependency.
 
+# VERSION
+
+0.2
+
 # AUTHOR
 
 This module is largely a lift and drop of Ken Este's \`perl.req\` script
@@ -191,3 +247,15 @@ This statement was lifted right from `perl.req`...
 >
 > _Any questions regarding the licensing of RPM should be addressed to
 > Erik Troan &lt;ewt@redhat.com_.>
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 851:
+
+    '=item' outside of any '=over'
+
+- Around line 860:
+
+    You forgot a '=back' before '=head2'
