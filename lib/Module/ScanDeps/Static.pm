@@ -201,7 +201,7 @@ sub parse_line {    ## no critic (Subroutines::ProhibitExcessComplexity)
   } ## end if ( $line =~ /\A=over/xsm)
 
   # skip the data section
-  return $line if $line =~ /\A__(DATA|END)__\z/xsm;
+  return if $line =~ /\A__(DATA|END)__/xsm;
 
   my $modver_re = qr/[.\d]+/xsm;
 
