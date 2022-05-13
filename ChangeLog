@@ -1,3 +1,22 @@
+Fri May 13 10:44:27 2022  Rob Lauer  <rlauer6@comcast.net>
+
+	[use base qw()]:
+	* lib/Modules/ScanDeps/Static.pm
+	- pod tweaks
+	- bump version
+	- --no-include-require, --no-add-version, --min-core-version
+	(get_module_version): consider < 5.8 core
+	(is_core): check min-core-version
+	(parse_line): find qw{(/'" for use base/parent
+	(parse): return sorted keys of dependencies
+	* requires
+	- + JSON::PP, version, Pod::Find
+	* Makefile
+	- don't clean up README.md, it will get built anyway
+	- -c flag to make-cpan-dist to use 'requires' file explicitly
+	* bin/scandeps-static.pl: bump version
+	* t/01-scandeps.t: test new return values of parse()
+
 Thu May 12 14:08:57 2022  Rob Lauer  <rlauer6@comcast.net>
 
 	[output formatting]:

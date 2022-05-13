@@ -26,43 +26,83 @@ Perl script or module.  It's not perfect and the regular expressions
 could use some polishing, but it works on a broad enough set of
 situations as to be useful.
 
+_NOTE: Only direct dependencies are returned by this module. If you
+want a recursive search for dependencies, use `scandeps.pl`_
+
+_!!EXPERIMENTAL!!_
+
+_The methods and output of this module is subject to revision!_
+
 # USAGE
 
 scandeps-static.pl \[options\] Module
 
+If "Module" is not provided, the script will read from STDIN.
+
+## Examples
+
+    scandeps-static.pl --no-core $(which scandeps-static.pl)
+
+    scandeps-static.pl --json $(which scandeps-static.pl)
+
 ## Options
 
-- --add-version, -a
+- --add-version, -a, --no-add-version
 
-    Add the version number to the dependency by inspecting the version of
+    Add the version number to the dependency list by inspecting the version of
     the module in your @INC path.
+
+    default: **--add-version**
 
 - --core, -c, --no-core
 
-    Include or exclude core modules.
+    Include or exclude core modules. See --min-core-version for
+    description of how core modules are identified.
+
+    default: **--core**
 
 - --help, -h
 
     Show usage.
 
-- --include-require, -i
+- --include-require, -i, --no-include-require
 
     Include statements that have `Require` in them but are not
     necessarily on the left edge of the code (possibly in tests).
+
+    default: <--include-require>
 
 - --json, -j
 
     Output the dependency list as a JSON encode string.
 
+- --min-core-version, -m
+
+    The minimum version of Perl that is considered core. Use this to
+    consider some modules non-core if they did not appear until after the
+    `min-core-version`.
+
+    Core modules are identified using `Module::CoreList` and comparing
+    the first release value of the module with the the minimum version of
+    Perl considered as a baseline.  If you're using this module to
+    identify the dependencies for your script **AND** you know you will be
+    using a specific version of Perl, then set the `min-core-version` to
+    that version of Perl.
+
+    default: 5.8.9
+
 - --separator, -s
 
-    Use the specified sting to separate modules and version numbers.  The
-    defualt is ' => '.
+    Use the specified sting to separate modules and version numbers in formatted output.
+
+    default: ' => '
 
 - --text, -t
 
     Output the dependency list as a simple text listing of module name and
     version in the same manner as `scandeps.pl`.
+
+    default: **--text**
 
 - --raw, -r
 
@@ -105,7 +145,7 @@ the targets of `require` statements as dependencies, set the
 # CAVEATS
 
 There are still many situations (including multi-line statements) that
-will prevent this module from properly identifying a dependency. As
+may prevent this module from properly identifying a dependency. As
 always, YMMV.
 
 # METHODS AND SUBROUTINES
@@ -125,6 +165,13 @@ Returns a `Module::ScanDeps::Static` object.
 
     default: **false**
 
+- add\_version
+
+    Boolean value that determines whether to include the version of the
+    module currently installed if there is no version specified.
+
+    default: **false**
+
 - core
 
     Boolean value that determines whether to include core modules as part
@@ -132,12 +179,18 @@ Returns a `Module::ScanDeps::Static` object.
 
     default: **true**
 
-- add\_version
+- json
 
-    Boolean value that determines whether to include the version of the
-    module currently installed if there is no version specified.
+    Boolean value that indicates output should be in JSON format.
 
     default: **false**
+
+- min\_core\_version
+
+    The minimum version of Perl which will be used to decide if a module
+    is include in Perl core.
+
+    default: 5.8.9
 
 - separator
 
@@ -147,6 +200,18 @@ Returns a `Module::ScanDeps::Static` object.
     default: ' => '
 
         Module::ScanDeps::Static 0.1
+
+- text
+
+    Boolean value that indicates output should be in the same format as `scandeps.pl`.
+
+    dafault: **true**
+
+- raw
+
+    Boolean value that indicates output should be in raw format (module version).
+
+    default: **falue**
 
 ## get\_require
 
@@ -173,22 +238,21 @@ numbers.
 
 - parse string
 
-        parse(\$script);
+        my @dependencies = parse(\$script);
 
-Scans the specified input and returns a list dependency objects. Each
-element of the array is a hash reference where the key is the module
-name and the value is version number.
+Scans the specified input and returns a list Perl modulde dependencies.
 
-Use the `get_dependencies` method to retrieve the dependencies
-as a formatted string. Use the `get_require` and `get_perlreq`
-methods to retrieve dependencies as a list of hash refs.
+Use the `get_dependencies` method to retrieve the dependencies as a
+formatted string or as a list of dependency objects. Use the
+`get_require` and `get_perlreq` methods to retrieve dependencies as
+a list of hash refs.
 
     my $scanner = Module::ScanDeps::Static->new({ path => 'my-script.pl' });
     my @dependencies = $scanner->parse;
 
 ## get\_dependencies
 
-Returns a formatted list of dependencies.
+Returns a formatted list of dependencies or a list of dependency objects.
 
 As JSON:
 
@@ -215,7 +279,7 @@ contain the keys "name" and "version" for each dependency.
 
 # VERSION
 
-0.2
+0.3
 
 # AUTHOR
 

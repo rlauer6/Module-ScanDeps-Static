@@ -13,13 +13,14 @@ TARBALL = Module-ScanDeps-Static.tar.gz
 
 all: README.md $(TARBALL)
 
-Module-ScanDeps-Static.tar.gz: $(PERL_MODULES) $(PERL_SCRIPTS)
+$(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	 make-cpan-dist \
 	   -e bin \
 	   -l lib \
 	   -m Module::ScanDeps::Static \
 	   -a 'Rob Lauer <rlauer6@comcast.net>' \
 	   -d 'scan modules for dependencies' \
+	   -c \
 	   -r requires \
 	   -t t/
 	cp $$(ls -1rt *.tar.gz | tail -1) $@
@@ -41,4 +42,4 @@ install: $(TARBALL)
 	cpanm -v $<
 
 clean:
-	rm -f $(TARBALL) README.md
+	rm -f $(TARBALL)
