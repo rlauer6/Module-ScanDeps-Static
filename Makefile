@@ -18,7 +18,7 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -e bin \
 	   -l lib \
 	   -m Module::ScanDeps::Static \
-	   -a 'Rob Lauer <rlauer6@comcast.net>' \
+	   -a 'BIGFOOT <bigfoot@cpan.org>' \
 	   -d 'scan modules for dependencies' \
 	   -c \
 	   -r requires \

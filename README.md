@@ -6,7 +6,7 @@ Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req
 
     my $scanner = Module::ScanDeps::Static->new({ file => 'myfile.pl' });
     $scanner->parse;
-    print $scanner->get_dependencies;
+    print $scanner->format_text;
 
 # DESCRIPTION
 
@@ -31,11 +31,11 @@ want a recursive search for dependencies, use `scandeps.pl`_
 
 _!!EXPERIMENTAL!!_
 
-_The methods and output of this module is subject to revision!_
+_The methods and output of this module are subject to revision!_
 
 # USAGE
 
-scandeps-static.pl \[options\] Module
+    scandeps-static.pl [options] Module
 
 If "Module" is not provided, the script will read from STDIN.
 
@@ -279,7 +279,7 @@ contain the keys "name" and "version" for each dependency.
 
 # VERSION
 
-0.3
+0.4
 
 # AUTHOR
 

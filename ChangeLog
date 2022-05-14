@@ -1,6 +1,17 @@
+Sat May 14 06:47:00 2022  Rob Lauer  <rlauer6@comcast.net>
+
+	[0.4 - failed tests on CHORNY]:
+	* t/01-scandep.st: --add-version = FALSE, he has a FOO::Bar?
+	* bin/scandeps-static.pl: bump version
+	* lib/Module/ScanDeps/Stati.pm
+	- bump version
+	- add use $DEFAULT_MIN_CORE_VERSION instead of magic value
+	- update pod
+	(parse): don't return followed by sort
+
 Fri May 13 10:44:27 2022  Rob Lauer  <rlauer6@comcast.net>
 
-	[use base qw()]:
+	[0.3 - use base qw()]:
 	* lib/Modules/ScanDeps/Static.pm
 	- pod tweaks
 	- bump version
@@ -16,10 +27,12 @@ Fri May 13 10:44:27 2022  Rob Lauer  <rlauer6@comcast.net>
 	- -c flag to make-cpan-dist to use 'requires' file explicitly
 	* bin/scandeps-static.pl: bump version
 	* t/01-scandeps.t: test new return values of parse()
+	* README-BUILD.md: new
+	* test-requires: in case someone does tests only?
 
 Thu May 12 14:08:57 2022  Rob Lauer  <rlauer6@comcast.net>
 
-	[output formatting]:
+	[0.2 - output formatting]:
 	* lib/Module/ScanDeps/Static.pm
 	- help
 	- + --separator, --raw, --version
