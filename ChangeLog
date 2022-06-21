@@ -1,3 +1,16 @@
+Tue Jun 21 11:36:18 2022  Rob Lauer  <rlauer@usgn.net>
+
+	[0.5 - perl version]:
+	* Makefile
+	- -D requires
+	- remove -c (don't add core files)
+	* lib/Module/ScanDeps/Static.pm
+	- pod spelling tweak
+	- always add perl version to output if found
+	- bump version
+	* bin/scandeps-static.pl: bump version
+	* README.md: generated file
+
 Sat May 14 06:47:00 2022  Rob Lauer  <rlauer6@comcast.net>
 
 	[0.4 - failed tests on CHORNY]:

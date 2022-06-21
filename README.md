@@ -211,7 +211,7 @@ Returns a `Module::ScanDeps::Static` object.
 
     Boolean value that indicates output should be in raw format (module version).
 
-    default: **falue**
+    default: **false**
 
 ## get\_require
 

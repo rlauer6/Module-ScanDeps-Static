@@ -20,8 +20,7 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -m Module::ScanDeps::Static \
 	   -a 'BIGFOOT <bigfoot@cpan.org>' \
 	   -d 'scan modules for dependencies' \
-	   -c \
-	   -r requires \
+	   -D requires \
 	   -t t/
 	cp $$(ls -1rt *.tar.gz | tail -1) $@
 
