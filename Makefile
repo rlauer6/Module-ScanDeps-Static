@@ -17,10 +17,12 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	 make-cpan-dist \
 	   -e bin \
 	   -l lib \
+	   -c \
 	   -m Module::ScanDeps::Static \
 	   -a 'BIGFOOT <bigfoot@cpan.org>' \
 	   -d 'scan modules for dependencies' \
 	   -D requires \
+	   -T test-requires \
 	   -t t/
 	cp $$(ls -1rt *.tar.gz | tail -1) $@
 
