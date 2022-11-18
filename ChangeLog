@@ -1,3 +1,11 @@
+Fri Nov 18 16:29:43 2022  Rob Lauer  <rlauer@usgn.net>
+
+	[0.8 - use base 'module']:
+	* lib/Module/ScanDeps/Static.pm
+	(parse_line): allow for use base 'module-name'
+	* bin/scandeps-static.pl: bump version
+	* README.md: likewise
+
 Fri Jul 15 09:56:49 2022  Rob Lauer  <rlauer6@comcast.net>
 
 	[0.7 - unit tests]:

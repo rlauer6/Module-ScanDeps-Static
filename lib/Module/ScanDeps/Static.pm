@@ -3,7 +3,7 @@ package Module::ScanDeps::Static;
 use strict;
 use warnings;
 
-our $VERSION = '0.7';
+our $VERSION = '0.8';
 
 use 5.010;
 
@@ -311,14 +311,16 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     # complicated...
 
     if ( $statement eq 'use' && $module =~ /(parent|base)/xsm ) {
-      if ( $version =~ /\A\s*qw\s*['"{(\/]\s*([^'")}\/]+)\s*['")}\/]/xsm ) {
+      if ( $version =~ /\A\s*qw?\s*['"{(\/]\s*([^'")}\/]+)\s*['")}\/]/xsm ) {
         $module  = $1;
         $version = $EMPTY;
-      } ## end if ( $version =~ ...)
+      }
+      elsif ( $version =~ /\A\s*['"]([^"']+)['"]\s*\z/xsm ) {
+        $module  = $1;
+        $version = $EMPTY;
+      }
     } ## end if ( $statement eq 'use'...)
     #
-
-    # print {*STDERR} "$module, $version\n";
 
     # we only consider require statements that are flushed against
     # the left edge. any other require statements give too many
@@ -1025,7 +1027,7 @@ contain the keys "name" and "version" for each dependency.
 
 =head1 VERSION
 
-0.4
+0.8
 
 =head1 AUTHOR
 
