@@ -1,3 +1,11 @@
+Mon Nov 21 12:26:27 2022  Rob Lauer  <rlauer6@comcast.net>
+
+	[0.9 - require]:
+	* lib/Module/ScanDeps/Static.pm
+	(parse_line): don't include a require with a $
+	* bin/scandeps-static.pl: bump version
+	* README.md: likewise
+
 Fri Nov 18 16:29:43 2022  Rob Lauer  <rlauer@usgn.net>
 
 	[0.8 - use base 'module']:
