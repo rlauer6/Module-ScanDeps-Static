@@ -1,4 +1,13 @@
-Fri Nov 18 16:29:43 2022  Rob Lauer  <rlauer@usgn.net>
+Tue Jan 24 10:13:41 2023  Rob Lauer  <rlauer6@comcast.net>
+
+	[0.9 - inheritance]:
+	* lib/Module/ScanDeps/Static.pm
+	- bump verion
+	(parse_line)
+	- recoginize multiple modules in inheritance chain
+	* bin/scandeps-static.pl: bump version
+
+Fri Nov 18 16:29:43 2022  Rob Lauer  <rlauer6@comcast.net>
 
 	[0.8 - use base 'module']:
 	* lib/Module/ScanDeps/Static.pm

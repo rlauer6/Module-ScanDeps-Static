@@ -3,7 +3,7 @@ package Module::ScanDeps::Static;
 use strict;
 use warnings;
 
-our $VERSION = '0.8';
+our $VERSION = '0.9';
 
 use 5.010;
 
@@ -73,7 +73,7 @@ sub new {
     $k =~ s/-/_/gxsm;
 
     $options{$k} = $v;
-  } ## end foreach my $k ( keys %options)
+  }
 
   # defaults
   $options{'core'}             //= $TRUE;
@@ -87,7 +87,7 @@ sub new {
   $self->set_require( {} );
 
   return $self;
-} ## end sub new
+}
 
 ########################################################################
 sub make_path_from_module {
@@ -97,7 +97,7 @@ sub make_path_from_module {
   my $file = join $SLASH, split /$DOUBLE_COLON/xsm, $module;
 
   return "$file.pm";
-} ## end sub make_path_from_module
+}
 
 ########################################################################
 sub get_module_version {
@@ -106,7 +106,7 @@ sub get_module_version {
 
   if ( !@include_path ) {
     @include_path = @INC;
-  } ## end if ( !@include_path )
+  }
 
   my ( $module, $version ) = split /\s+/xsm, $module_w_version;
 
@@ -132,10 +132,10 @@ sub get_module_version {
       = eval { return ExtUtils::MM->parse_version($path) // 0; };
 
     last;
-  } ## end foreach my $prefix (@include_path)
+  }
 
   return \%module_version;
-} ## end sub get_module_version
+}
 
 ########################################################################
 sub is_core {
@@ -159,17 +159,17 @@ sub is_core {
     # test modules against Perls that are older than 5.8.9 - however,
     # some modules like JSON::PP did not appear until > 5.10
 
-    # print {*STDERR} "$first_release_version $min_core_version";
+    # print {*STDERR} "$module: $first_release_version $min_core_version\n";
 
     $core = version->parse($first_release_version)
       <= version->parse($min_core_version) ? 1 : 0;
 
-  } ## end if (@ms)
+  }
 
   # print {*STDERR} "$module: [$core]\n";
 
   return $core;
-} ## end sub is_core
+}
 
 ########################################################################
 sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
@@ -187,13 +187,13 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
       chomp $line;
 
       last if $line eq $tag;
-    } ## end while ( $line = <$fh> )
+    }
 
     $line = <$fh>;
 
     return if !$line;
 
-  } ## end if ( $line =~ ...)
+  }
 
   # skip q{} quoted sections - just hope we don't have curly brackets
   # within the quote, nor an escaped hash mark that isn't a comment
@@ -207,10 +207,10 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     while ( $line = <$fh> ) {
       last if $line =~ /$tag/xsm;
-    } ## end while ( $line = <$fh> )
+    }
 
     return if !$line;
-  } ## end if ( $line =~ /\A.*\Wq[qxwr]?\s*([{([#|\/])[^})\]#|\/]*$/xsm...[[({]}]))
+  }
 
   # skip the documentation
 
@@ -222,18 +222,18 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     while ( $line = <$fh> ) {
       last if $line =~ /\A^=cut/xsm;
-    } ## end while ( $line = <$fh> )
+    }
 
     return if !$line;
-  } ## end if ( $line =~ /\A=(head[\d]|pod|for|item)/xsm)
+  }
 
   if ( $line =~ /\A=over/xsm ) {
     while ( $line = <$fh> ) {
       last if /\A=back/xsm;
-    } ## end while ( $line = <$fh> )
+    }
 
     return if !$line;
-  } ## end if ( $line =~ /\A=over/xsm)
+  }
 
   # skip the data section
   return if $line =~ /\A__(DATA|END)__/xsm;
@@ -253,12 +253,12 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     while ( $line = <$fh> ) {
       chomp $line;
       last if $line eq $tag;
-    } ## end while ( $line = <$fh> )
+    }
 
     $line = <$fh>;
 
     return if !$line;
-  } ## end if ( $line =~ /print(?:\s+|\s+\S+\s+)\<\<\s*(["'`])(.+?)\1/xsm...)
+  }
 
   # Skip multiline print and assign statements
   if ( $line =~ /\$\S+\s*=\s*(")([^"\\]|(\\.))*\z/xsm
@@ -270,12 +270,12 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     while ( $line = <$fh> ) {
       last if $line =~ /\A([^\\$quote]|(\\.))*$quote/xsm;
-    } ## end while ( $line = <$fh> )
+    }
 
     $line = <$fh>;
 
     return if !$line;
-  } ## end if ( $line =~ /\$\S+\s*=\s*(")([^"\\]|(\\.))*\z/xsm...)
+  }
 
   # ouch could be in a eval, perhaps we do not want these since we catch
   # an exception they must not be required
@@ -284,7 +284,7 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
   #   eval "require Term::Rendezvous;" or die $@;
   #   eval { require Carp } if defined $^S; # If error/warning during compilation,
 
-  ## no critic (RegularExpressions::ProhibitComplexRegexes, RegularExpressions::RequireBracesForMultiline)
+  ## no critic (ProhibitComplexRegexes, RequireBracesForMultiline)
   if (
     ( $line =~ /\A(\s*) # we hope the inclusion starts the line
          (require|use)\s+(?![{])      # do not want 'do {' loops
@@ -302,7 +302,7 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     $version //= $EMPTY;
 
-    # print {*STDERR} "$whitespace, $statement, $module, $version\n";
+    #print {*STDERR} "$whitespace, $statement, $module, $version\n";
 
     # fix misidentification of version when use parent qw{ Foo };
     #
@@ -319,7 +319,10 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
         $module  = $1;
         $version = $EMPTY;
       }
-    } ## end if ( $statement eq 'use'...)
+    }
+
+    #print {*STDERR} "$whitespace, $statement, $module, $version\n";
+
     #
 
     # we only consider require statements that are flushed against
@@ -329,7 +332,7 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     if ( !$self->get_include_require ) {
       return $line if $whitespace ne $EMPTY && $statement eq 'require';
-    } ## end if ( !$self->get_include_require)
+    }
 
     # if there is some interpolation of variables just skip this
     # dependency, we do not want
@@ -356,7 +359,7 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     if ( $module =~ /\A\//xsm ) {
       $self->add_require($module);
       return $line;
-    } ## end if ( $module =~ /\A\//xsm)
+    }
 
     # sometimes people do use POSIX qw(foo), or use POSIX(qw(foo)) etc.
     # we can strip qw.*$, as well as (.*$:
@@ -386,7 +389,7 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
       return $line;
 
-    } ## end if ( $module =~ /\Av?([\d._]+)\z/xsm)
+    }
 
     # ph files do not use the package name inside the file.
     # perlmodlib documentation says:
@@ -406,28 +409,42 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     if ( $statement eq 'use'
       && ( $module eq 'base' || $module eq 'parent' ) ) {
       $self->add_require( $module, $version );
+      #print {*STDERR}
+      #  "statement: $statement module: $module, version: $version\n";
 
       if ( $version =~ /\Aqw\s*[{(\/'"]\s*([^)}\/"']+?)\s*[})\/"']/xsm ) {
         foreach ( split $SPACE, $1 ) {
           $self->add_require( $line, undef );
-        } ## end foreach ( split $SPACE, $1 )
-      } ## end if ( $version =~ ...)
+        }
+      }
       elsif ( $version =~ /(["'])([^"']+)\1/xsm ) {
         $self->add_require( $2, undef );
-      } ## end elsif ( $version =~ /(["'])([^"']+)\1/xsm)
+      }
 
       return $line;
-    } ## end if ( $statement eq 'use'...)
+    }
 
     if ( $version && $version !~ /\A$modver_re\z/oxsm ) {
       $version = undef;
-    } ## end if ( $version && $version...)
+    }
 
-    $self->add_require( $module, $version );
-  } ## end if ( ( $line =~ /\A(\s*) # we hope the inclusion starts the line...))
+    #print {*STDERR}
+    #  "statement: $statement module: $module, version: $version\n";
+
+    my @module_list = split /\s+/xsm, $module;
+
+    if ( @module_list > 1 ) {
+      for (@module_list) {
+        $self->add_require( $_, $EMPTY );
+      }
+    }
+    else {
+      $self->add_require( $module, $version );
+    }
+  }
 
   return $line;
-} ## end sub parse_line
+}
 
 ########################################################################
 sub parse {
@@ -441,34 +458,34 @@ sub parse {
       or croak "could not open file '$file' for reading: $OS_ERROR";
 
     $self->set_handle($fh);
-  } ## end if ( my $file = $self->...)
+  }
 
   if ( !$self->get_handle && $script ) {
     $self->set_handle( IO::Scalar->new($script) );
-  } ## end if ( !$self->get_handle...)
+  }
   elsif ( !$self->get_handle ) {
     open my $fh, '<&STDIN'  ## no critic (InputOutput::RequireBriefOpen)
       or croak 'could not open STDIN';
 
     $self->set_handle($fh);
-  } ## end elsif ( !$self->get_handle)
+  }
 
   my $fh = $self->get_handle;
 
   while ( my $line = <$fh> ) {
     last if !$self->parse_line($line);
-  } ## end while ( my $line = <$fh> )
+  }
 
   # only close the file if we opened...
   if ( $self->get_path ) {
     close $fh
       or croak 'could not close file ' . $self->get_path . "$OS_ERROR\n";
-  } ## end if ( $self->get_path )
+  }
 
   my @sorted_dependencies = sort keys %{ $self->get_require };
 
   return @sorted_dependencies;
-} ## end sub parse
+}
 
 ########################################################################
 #
@@ -520,23 +537,23 @@ sub add_require {
   if ($oldver) {
     if ( $HAVE_VERSION && $newver && version->new($oldver) < $newver ) {
       $require->{$module} = $newver;
-    } ## end if ( $HAVE_VERSION && ...)
-  } ## end if ($oldver)
+    }
+  }
   elsif ( !$newver ) {
     my $m = {};
 
     if ( $self->get_add_version ) {
       $m = $self->get_module_version($module);
-    } ## end if ( $self->get_add_version)
+    }
 
     $require->{$module} = $m->{'version'} // $EMPTY;
-  } ## end elsif ( !$newver )
+  }
   else {
     $require->{$module} = $newver;
-  } ## end else [ if ($oldver) ]
+  }
 
   return $self;
-} ## end sub add_require
+}
 
 ########################################################################
 sub format_json {
@@ -552,14 +569,14 @@ sub format_json {
 
     if ( !$perl_version && $self->get_add_version ) {
       $perl_version = $PERL_VERSION;
-    } ## end if ( !$perl_version &&...)
+    }
 
     push @requirements,
       {
       name    => 'perl',
       version => $perl_version // $EMPTY
       };
-  } ## end if ( exists $perlreq{'perl'...})
+  }
 
   foreach my $m ( sort keys %requires ) {
 
@@ -570,12 +587,12 @@ sub format_json {
       name    => $m,
       version => $requires{$m}
       };
-  } ## end foreach my $m ( sort keys %requires)
+  }
 
   my $json = JSON::PP->new->pretty;
 
   return wantarray ? @requirements : $json->encode( \@requirements );
-} ## end sub format_json
+}
 
 ########################################################################
 sub get_dependencies {
@@ -584,14 +601,14 @@ sub get_dependencies {
 
   if ( $self->get_json ) {
     return scalar $self->format_json;
-  } ## end if ( $self->get_json )
+  }
   elsif ( $self->get_text || $self->get_raw ) {
     return $self->format_text;
-  } ## end elsif ( $self->get_text ||...)
+  }
   else {
     return $self->format_json;
-  } ## end else [ if ( $self->get_json )]
-} ## end sub get_dependencies
+  }
+}
 
 ########################################################################
 sub format_text {
@@ -616,16 +633,16 @@ sub format_text {
     if ( $self->get_raw ) {
       $separator = $SPACE;
       $format    = "%-${max_len}s%s%s";
-    } ## end if ( $self->get_raw )
+    }
     else {
       $name = "'$name'";
-    } ## end else [ if ( $self->get_raw ) ]
+    }
 
     push @output, sprintf $format, $name, $separator, $version // $EMPTY;
-  } ## end foreach my $module (@requirements)
+  }
 
   return join $NEWLINE, @output, $EMPTY;
-} ## end sub format_text
+}
 
 ########################################################################
 sub to_rpm {
@@ -636,7 +653,7 @@ sub to_rpm {
 
   foreach my $perlver ( sort keys %{ $self->get_perlreq } ) {
     push @rpm_deps, "perl >= $perlver";
-  } ## end foreach my $perlver ( sort ...)
+  }
 
   my %require = %{ $self->get_require };
 
@@ -652,20 +669,20 @@ sub to_rpm {
           $require{$module} = $m->{'version'};
 
           push @rpm_deps, "perl($module) >= %s", $m->{'version'};
-        } ## end if ( $m->{'version'} )
-      } ## end if ( $self->get_add_version)
+        }
+      }
 
       if ( !$m || !$m->{'version'} ) {
         push @rpm_deps, "perl($module)";
-      } ## end if ( !$m || !$m->{'version'...})
-    } ## end if ( !$require{$module...})
+      }
+    }
     else {
       push @rpm_deps, "perl($module) >= $require{$module}";
-    } ## end else [ if ( !$require{$module...})]
-  } ## end foreach my $module ( sort keys...)
+    }
+  }
 
   return join $EMPTY, @rpm_deps;
-} ## end sub to_rpm
+}
 
 ########################################################################
 sub main {
@@ -699,7 +716,7 @@ sub main {
       -sections => 'VERSION|NAME|AUTHOR',
       -verbose  => 99,
     );
-  } ## end if ( $options{'version'...})
+  }
 
   if ( $options{'help'} ) {
     pod2usage(
@@ -708,7 +725,7 @@ sub main {
       -sections => 'USAGE|VERSION',
       -verbose  => 99,
     );
-  } ## end if ( $options{'help'} )
+  }
 
   $options{'path'} = shift @ARGV;
 
@@ -717,13 +734,13 @@ sub main {
 
   if ( $options{'json'} ) {
     print $scanner->get_dependencies( format => 'json' );
-  } ## end if ( $options{'json'} )
+  }
   else {
     print $scanner->get_dependencies( format => 'text' );
-  } ## end else [ if ( $options{'json'} )]
+  }
 
   exit $SUCCESS;
-} ## end sub main
+}
 
 1;
 
