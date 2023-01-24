@@ -279,7 +279,7 @@ contain the keys "name" and "version" for each dependency.
 
 # VERSION
 
-0.8
+0.9
 
 # AUTHOR
 

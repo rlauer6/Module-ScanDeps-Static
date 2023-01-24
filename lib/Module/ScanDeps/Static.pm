@@ -3,7 +3,7 @@ package Module::ScanDeps::Static;
 use strict;
 use warnings;
 
-our $VERSION = '0.9';
+our $VERSION = '1.001';
 
 use 5.010;
 
@@ -333,6 +333,9 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     if ( !$self->get_include_require ) {
       return $line if $whitespace ne $EMPTY && $statement eq 'require';
     }
+    elsif ( $statement eq 'require' ) {
+      return $line if $line =~ /\$/xsm; # eval?
+    }
 
     # if there is some interpolation of variables just skip this
     # dependency, we do not want
@@ -427,7 +430,6 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     if ( $version && $version !~ /\A$modver_re\z/oxsm ) {
       $version = undef;
     }
-
     #print {*STDERR}
     #  "statement: $statement module: $module, version: $version\n";
 
@@ -1044,7 +1046,7 @@ contain the keys "name" and "version" for each dependency.
 
 =head1 VERSION
 
-0.8
+0.9
 
 =head1 AUTHOR
 

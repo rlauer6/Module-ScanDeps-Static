@@ -22,6 +22,7 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -a 'BIGFOOT <bigfoot@cpan.org>' \
 	   -d 'scan modules for dependencies' \
 	   -D requires \
+	   -H . \
 	   -T test-requires \
 	   -t t/
 	cp $$(ls -1rt *.tar.gz | tail -1) $@
