@@ -1,3 +1,11 @@
+Tue Feb 21 17:22:50 2023  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.002 - undef]:
+	* lib/Module/ScanDeps/Static.pm
+	(get_module_version): 0 if version eq undef
+	* README.md: generated
+	* bin/scandeps-static.pl: bump version
+
 Tue Jan 24 10:13:41 2023  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.001 - inheritance]:

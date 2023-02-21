@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
 use lib 'lib';
 
