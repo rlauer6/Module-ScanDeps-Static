@@ -1,3 +1,21 @@
+Sun May 19 10:27:35 2024  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.004]:
+	* Module/ScanDeps/Static.pm
+	- pod tweaks
+	(parse_line): don't convert / to :: for .pl files
+	(get_dependencies): make default 'text'
+	* README: generated
+	* lib/Module/ScanDeps/FindRequires.pm: new
+	* lib/Module/ScanDeps/Static.pm
+	- use JSON, no JSON::PP
+	* Makefile: added above to build
+	* provides: likewise
+	* requires
+	- JSON, not JSON::PP
+	- CLI::Simple
+	* postamble: new
+
 Sun May 14 19:01:29 2023  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.003]:

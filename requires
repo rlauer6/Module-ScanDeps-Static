@@ -1,6 +1,5 @@
 Class::Accessor::Fast 0.51
 IO::Scalar 2.111
-JSON::PP 2.97001
-Pod::Find 0
 Readonly 2.05
-version 0
+CLI::Simple 0.0.4
+JSON 4.10

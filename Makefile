@@ -1,6 +1,7 @@
 
 PERL_MODULES = \
-    lib/Module/ScanDeps/Static.pm
+    lib/Module/ScanDeps/Static.pm \
+    lib/Module/ScanDeps/FindRequires.pm
 
 PERL_SCRIPTS = \
     bin/scandeps-static.pl
@@ -24,7 +25,8 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -D requires \
 	   -H . \
 	   -T test-requires \
-	   -t t/
+	   -t t/ \
+	   -F postamble
 	cp $$(ls -1rt *.tar.gz | tail -1) $@
 
 README.md: $(PERL_MODULES)

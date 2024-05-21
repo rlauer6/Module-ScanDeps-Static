@@ -4,7 +4,7 @@ Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req
 
 # SYNOPSIS
 
-    my $scanner = Module::ScanDeps::Static->new({ file => 'myfile.pl' });
+    my $scanner = Module::ScanDeps::Static->new({ path => 'myfile.pl' });
     $scanner->parse;
     print $scanner->format_text;
 
