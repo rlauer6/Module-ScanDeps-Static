@@ -3,7 +3,7 @@ package Module::ScanDeps::Static;
 use strict;
 use warnings;
 
-our $VERSION = '1.004';
+our $VERSION = '1.005';
 
 use 5.010;
 
@@ -18,28 +18,28 @@ use Pod::Usage;
 use Pod::Find qw( pod_where );
 use Readonly;
 use IO::Scalar;
-use List::Util qw( max );
+use List::Util qw( max none );
 use version;
 
 use parent qw( Class::Accessor::Fast );
 
-__PACKAGE__->follow_best_practice;
-__PACKAGE__->mk_accessors(
-  qw(
-    add_version
-    core
-    handle
-    include_require
-    json
-    min_core_version
-    path
-    perlreq
-    raw
-    require
-    separator
-    text
-  )
+our @OPTIONS = qw(
+  add_version
+  core
+  handle
+  include_require
+  json
+  min_core_version
+  path
+  perlreq
+  raw
+  require
+  separator
+  text
 );
+
+__PACKAGE__->follow_best_practice;
+__PACKAGE__->mk_accessors(@OPTIONS);
 
 # booleans
 Readonly my $TRUE  => 1;
@@ -90,6 +90,12 @@ sub new {
   $options{include_require}  //= $FALSE;
   $options{add_version}      //= $TRUE;
   $options{min_core_version} //= $DEFAULT_MIN_CORE_VERSION;
+
+  # check for unknown options
+  foreach my $o ( keys %options ) {
+    die "unknown option $o\n"
+      if none { $_ eq $o } @OPTIONS;
+  }
 
   my $self = $class->SUPER::new( \%options );
 
@@ -170,7 +176,7 @@ sub is_core {
     # consider a module core if its first release was less than some
     # version of Perl. This is done because CPAN testers don't seem to
     # test modules against Perls that are older than 5.8.9 - however,
-    # some modules like JSON::PP did not appear until > 5.10
+    # some modules like JSON::PP did not appear until after 5.10
 
     # print {*STDERR} "$module: $first_release_version $min_core_version\n";
 
@@ -964,7 +970,7 @@ default: B<false>
 =item min_core_version
 
 The minimum version of Perl which will be used to decide if a module
-is include in Perl core.
+is included in Perl core.
 
 default: 5.8.9
 
@@ -1060,7 +1066,7 @@ contain the keys "name" and "version" for each dependency.
 
 =head1 VERSION
 
-1.002
+1.005
 
 =head1 AUTHOR
 

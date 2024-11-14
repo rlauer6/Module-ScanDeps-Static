@@ -188,7 +188,7 @@ Returns a `Module::ScanDeps::Static` object.
 - min\_core\_version
 
     The minimum version of Perl which will be used to decide if a module
-    is include in Perl core.
+    is included in Perl core.
 
     default: 5.8.9
 
@@ -279,7 +279,7 @@ contain the keys "name" and "version" for each dependency.
 
 # VERSION
 
-1.002
+1.005
 
 # AUTHOR
 

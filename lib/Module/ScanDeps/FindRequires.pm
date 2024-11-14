@@ -10,20 +10,25 @@ use Data::Dumper;
 use English qw(-no_match_vars);
 use File::Find;
 use File::Temp qw(tempfile);
-use List::Util qw(any);
+use File::Basename qw(fileparse);
+use List::Util qw(any none);
 use JSON;
 use Module::ScanDeps::Static;
 use Scalar::Util qw(reftype);
+use Progress::Any '$progress';
+use Progress::Any::Output 'TermProgressBarColor', template => '%P/%T (%6.2p%%) %m';
 
 use Readonly;
 
-Readonly our $TRUE    => 1;
-Readonly our $FALSE   => 0;
-Readonly our $EMPTY   => q{};
-Readonly our $SUCCESS => 0;
-Readonly our $FAILURE => 1;
+Readonly::Scalar our $TRUE    => 1;
+Readonly::Scalar our $FALSE   => 0;
+Readonly::Scalar our $EMPTY   => q{};
+Readonly::Scalar our $SUCCESS => 0;
+Readonly::Scalar our $FAILURE => 1;
 
-our $VERSION = '1.004';
+Readonly::Scalar our $MIN_PERL_VERSION => '5.10.1';
+
+our $VERSION = '1.005';
 
 use parent qw(CLI::Simple);
 
@@ -40,12 +45,30 @@ sub find_requires {
   my @all_dependencies;
   my %requires_by_file;
 
+  my $min_perl_version = $self->get_min_perl_version // $MIN_PERL_VERSION;
+  my $include_core     = $self->get_core             // $FALSE;
+
+  my $progress_bar = $self->get_progress_bar;
+
+  if ($progress_bar) {
+    $progress->target( scalar @{$files} );
+  }
+
   foreach my $f ( @{$files} ) {
+    if ($progress_bar) {
+      my ( $name, $path, $ext ) = fileparse( $f, qr/[.][^.]+$/xsm );
+
+      $progress->update(
+        message => sprintf '%s...',
+        "$name$ext"
+      );
+    }
 
     my $scanner = Module::ScanDeps::Static->new(
-      { core            => $FALSE,
-        include_require => $TRUE,
-        path            => $f,
+      { core             => $include_core,
+        include_require  => $TRUE,
+        path             => $f,
+        min_core_version => $min_perl_version,
       }
     );
 
@@ -55,6 +78,10 @@ sub find_requires {
     $requires_by_file{$f} = \@dependencies;
 
     push @all_dependencies, @dependencies;
+  }
+
+  if ($progress_bar) {
+    $progress->finish();
   }
 
   $self->set_requires_map( \%requires_by_file );
@@ -157,9 +184,35 @@ sub slurp_file {
 }
 
 ########################################################################
+sub get_abs_exclude_paths {
+########################################################################
+  my ($self) = @_;
+
+  return
+    if !$self->get_exclude_path;
+
+  my @paths;
+
+  my $cwd = getcwd;
+
+  foreach ( @{ $self->get_exclude_path } ) {
+    if ( !/^\//xsm ) {
+      push @paths, "$cwd/$_";
+    }
+    else {
+      push @paths, $_;
+    }
+  }
+
+  return \@paths;
+}
+
+########################################################################
 sub get_file_listing {
 ########################################################################
   my ( $self, %args ) = @_;
+
+  my @exclude_paths = @{ $self->get_abs_exclude_paths || [] };
 
   # --file file
   return [ $self->get_file ]
@@ -174,18 +227,28 @@ sub get_file_listing {
   # --path (default)
   my $path = $args{path};
 
+  if ( $path !~ /^\//xsm ) {
+    $path = getcwd . q{/} . $path;
+  }
+
   my @files;
 
   eval {
     find(
-      sub {
-        return
-          if /^[.]/xsm || !/[.]p(:?m|l)$/xsm;
+      { no_chdir => $FALSE,
+        wanted   => sub {
 
-        die 'done'
-          if !$self->get_recurse && $path ne $File::Find::dir;
+          return
+            if @exclude_paths && any { $File::Find::dir =~ /^$_/xsm } @exclude_paths;
 
-        push @files, $File::Find::name;
+          return
+            if /^[.]/xsm || !/[.]p(:?m|l)$/xsm;
+
+          die 'done'
+            if !$self->get_recurse && $path ne $File::Find::dir;
+
+          push @files, $File::Find::name;
+        }
       },
       $path,
     );
@@ -205,6 +268,9 @@ sub get_package_list {
 
   foreach my $f ( @{$files} ) {
     my $content = slurp_file $f;
+
+    # remove pod
+    $content =~ s/^=pod.*=cut\s*$//xsm;
 
     while ( $content =~ /^package\s+([^;]+);$/xsmg ) {
       push @packages, $1;
@@ -234,22 +300,38 @@ sub list_files {
 }
 
 ########################################################################
+sub get_output_handle {
+########################################################################
+  my ($self) = @_;
+
+  return *STDOUT
+    if !$self->get_output;
+
+  open my $fh, '>', $self->get_output
+    or die 'could not open ' . $self->get_output . "writing\n";
+
+  return $fh;
+}
+
+########################################################################
 sub _format {
 ########################################################################
   my ( $self, $obj, %args ) = @_;
 
   my $format = $args{format} //= $self->get_format // $EMPTY;
 
+  return $obj
+    if $format !~ /(?:json|text)/xsm;
+
+  my %modules = map { $_->{name} => $_->{version} } @{$obj};
+
+  my $fh = $self->get_output_handle;
+
   if ( $format eq 'json' ) {
-    print {*STDOUT} JSON->new->pretty->encode($obj);
+    print {$fh} JSON->new->pretty->encode( \%modules );
   }
   elsif ( $format eq 'text' ) {
-    if ( reftype($obj) eq 'ARRAY' ) {
-      print {*STDOUT} join "\n", @{$obj};
-    }
-    else {
-      print {*STDOUT} Dumper($obj);
-    }
+    print {$fh} join "\n", map { sprintf '%s %s', $_, $modules{$_} } keys %modules;
 
     return 0;
   }
@@ -317,14 +399,15 @@ sub create_requires {
   return $requires
     if !$format;
 
+  my $fh = $self->get_output_handle;
+
   if ( $format eq 'json' ) {
-    print {*STDOUT} JSON->new->pretty->encode($requires);
+    print {$fh} JSON->new->pretty->encode($requires);
   }
   else {
     $requires = $requires->{requires};
 
-    print {*STDOUT} join "\n",
-      map { sprintf 'requires "%s", "%s"', $_, $requires->{$_} } sort keys %{$requires};
+    print {$fh} join "\n", map { sprintf 'requires "%s", "%s";', $_, $requires->{$_} } sort keys %{$requires};
   }
 
   return 0;
@@ -338,6 +421,20 @@ sub create_cpanfile {
   my $requires = $self->fetch_requires;
 
   $self->create_requires( requires => $requires, format => 'text' );
+
+  return 0;
+}
+
+########################################################################
+sub dump_requires {
+########################################################################
+  my ($self) = @_;
+
+  my $fh = $self->get_output_handle;
+
+  my $requires = $self->fetch_requires->{requires};
+
+  print {$fh} join "\n", sort map { sprintf '%s %s', $_, $requires->{$_} } keys %{$requires};
 
   return 0;
 }
@@ -359,14 +456,27 @@ sub dump_map {
     $requirements{$f} = { map { ( $_->{name} => $_->{version} ) } @{ $map->{$f} } };
   }
 
+  my $fh = $self->get_output_handle;
+
+  my @filter_list = @{ $self->get_filter_list || [] };
+
+  foreach my $f (@filter_list) {
+    foreach my $file ( keys %requirements ) {
+      foreach my $m ( keys $requirements{$file} ) {
+        next if $m !~ /^$f/xsm;
+        delete $requirements{$file}->{$m};
+      }
+    }
+  }
+
   if ( $format eq 'json' ) {
-    print {*STDOUT} JSON->new->pretty->encode( \%requirements );
+    print {$fh} JSON->new->pretty->encode( \%requirements );
   }
   else {
     foreach my $m ( keys %requirements ) {
-      print {*STDOUT} sprintf "%s\n", $m;
+      print {$fh} sprintf "%s\n", $m;
       my @map_w_version = map { sprintf "\t%s, %s\n", $_, $requirements{$m}->{$_} } sort keys $requirements{$m};
-      print {*STDOUT} join q{}, @map_w_version;
+      print {$fh} join q{}, @map_w_version;
     }
 
   }
@@ -441,8 +551,10 @@ sub check_requires {
     }
   }
 
+  my $fh = $self->get_output_handle;
+
   if ($retval) {
-    print {*STDOUT} JSON->new->pretty->encode( \%new_required_modules );
+    print {$fh} JSON->new->pretty->encode( \%new_required_modules );
   }
 
   return $retval;
@@ -465,6 +577,8 @@ sub add_requires {
 
     my $modules = eval { return JSON->new->decode(<>); };
 
+    my $fh = $self->get_output_handle;
+
     if ( !$modules || $EVAL_ERROR ) {
       print {*STDERR} sprintf "no modules added %s\n", $EVAL_ERROR // $EMPTY;
     }
@@ -477,7 +591,7 @@ sub add_requires {
         $self->update_requires($requires);
       }
       else {
-        print {*STDOUT} JSON->new->pretty->encode($requires);
+        print {$fh} JSON->new->pretty->encode($requires);
       }
     }
   }
@@ -499,11 +613,13 @@ sub delete_requires {
 
   delete $requires->{requires}->{$module};
 
+  my $fh = $self->get_output_handle;
+
   if ( $self->get_update ) {
     $self->update_requires($requires);
   }
   else {
-    print {*STDOUT} JSON->new->pretty->encode($requires);
+    print {$fh} JSON->new->pretty->encode($requires);
   }
 
   return 0;
@@ -543,17 +659,23 @@ sub main {
 ########################################################################
 
   my @option_specs = qw(
+    core|c!
+    exclude|e=s@
+    exclude-path|E=s@
     file|f=s
     filter|F=s
     file-list|L=s
     format|t=s
     max-items|m=i
+    min-perl-version=s
     module-version=s
     module|M=s
+    output|o=s
     path|p=s
+    progress-bar|P!
     recurse|R!
     requires|r=s
-    update
+    update|u
     versions|v
   );
 
@@ -568,6 +690,7 @@ sub main {
       'list-requires'   => \&list_requires,
       'list-files'      => \&list_files,
       'dump-map'        => \&dump_map,
+      'dump-requires'   => \&dump_requires,
       'check-requires'  => \&check_requires,
       'add-requires'    => \&add_requires,
       'delete-requires' => \&delete_requires,
@@ -580,9 +703,12 @@ sub main {
     @filter = slurp_file( $cli->get_filter );
   }
 
-  my $recurse = $cli->get_recurse;
+  if ( $cli->get_exclude ) {
+    push @filter, @{ $cli->get_exclude };
+  }
 
-  $cli->set_recurse( defined $recurse ? $recurse : $TRUE );
+  $cli->set_recurse( $cli->get_recurse           // $TRUE );
+  $cli->set_progress_bar( $cli->get_progress_bar // $TRUE );
 
   $cli->set_filter_list( \@filter );
 
@@ -594,6 +720,8 @@ sub main {
 }
 
 1;
+
+## no critic
 
 __END__
 
@@ -609,12 +737,14 @@ find-requires.pl
 
  find-requires.pl --path src/main/perl dump-map
 
+ Script to maintain a manifest of Perl module dependencies for a project.
+
 =head1 DESCRIPTION
 
 C<find-requires.pl> is a script to help you find and maintain a list
-of dependencies for you Perl application. The script will help you
-create a C<requires> file which can be used to produce a C<cpanfile>
-typically used by L<Carton>.
+of dependencies for your Perl application. The script will create a
+C<requires> file which can be used to produce a C<cpanfile> typically
+used by L<Carton>.
 
 The C<requires> file is a JSON file similar to the one shown below.
 
@@ -629,8 +759,8 @@ The C<requires> file is a JSON file similar to the one shown below.
    ]
  }
 
-When C<find-requires.pl> determines dependencies it will automatically
-recognize Perl modules provided by your application.
+When C<find-requires> determines dependencies it will automatically
+exclude Perl modules provided by your application.
 
 =head2 Excluding Modules from the Dependency List
 
@@ -662,30 +792,30 @@ example, you can create a pre-commit hook that scans the file for new
 dependencies and either halts the commit or automatically adds the
 dependency before commiting the file.
 
-=head1 USAGE
+=head1 OPTIONS
 
- find-requires.pl options command
+ --help, -h         help
+ --core, --no-core  include core modules (default: false)
+ --exclude, -e      module(s) to exclude
+ --exclude-path, -E path(s) to exclude
+ --file, -f         path to single file to scan
+ --filter, -F       name of a file containing names of modules to exclude 
+                    from requires list
+ --format, -t       format of output (text|json)
+ --max-items, -m    maximum number of files to scan 
+ --min-perl-version minimum version of perl to consider a module as 'core' (default 5.10.1)
+ --module, -M       module to add when using 'add-requires'
+ --module-version   module version when adding module to requires list (default: 0)
+ --no-recurse       do not recurse into subdirectories when lookin for files
+ --output, -o       file to write output to (default: STDOUT)
+ --path, -p         path to search for .pm & .pl files
+ --progress-bar,-P  display progress bar, --no-progress-bar to turn off (default: true)
+ --requires, -r     name of the file containging the required modules and exclusion list
+ --update, -u       update the requires file
+ --versions, -v     include version numbers in output
 
- Script to maintain a manifest of Perl module dependencies for a project.
+=head2 Commands
 
- Options
- -------
- --help, -h       help
- --file, -f       path to single file to scan
- --filter, -F     name of a file containing names of modules to exclude 
-                  from requires list
- --format, -t     format of output (text|json)
- --max-items, -m  maximum number of files to scan 
- --module, -M     module to add when using 'add-requires'
- --module-version module version when adding module to requires list (default: 0)
- --no-recurse     do not recurse into subdirectories when lookin for files
- --path, -p       path to search for .pm & .pl files
- --requires, -r   name of the file containging the required modules and exclusion list
- --update, -u     update the requires file
- --versions, -v   include version numbers in output
-
- Commands
- --------
  add-requires       add a new required module to requires file
  check-requires     checks a single file (or all files for new depdenencies)
  create-cpanfile    creates a cpanfile from the requires file or as the output of a scan
@@ -695,12 +825,11 @@ dependency before commiting the file.
  list-packages      lists all packages found in files
  list-requires      lists the dependencies (unfiltered, raw output)
 
- Notes
- ----- 
+=head2 Notes
 
  * files in the current directory and below will be scanned unless
    --path or --file is provided. Use --no-recurse to stop the scanner
-   from traversing below the root of our you search path.
+   from traversing below the root of your search path.
 
  * 'dump-map' will always do a re-scan either on a single file or the
    list of files if no --file is given
@@ -716,7 +845,7 @@ dependency before commiting the file.
    requirements are found facilitating use in bash scripts and
    Makefile recipes
 
-=head1 RECIPES
+=head2 Recipes
 
 I<Note: The recipes below that do not use the C<--path> option, assume
 you are executing the script from the root of your application.>
@@ -751,7 +880,7 @@ you are executing the script from the root of your application.>
 I<Note: C<dump-map> will always rescan the entire application
 directory.>
 
-  find-requires.pl dump-map
+  find-requires dump-map
 
 =back
 
