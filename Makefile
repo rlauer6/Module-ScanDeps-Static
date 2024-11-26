@@ -1,3 +1,4 @@
+#-*- mode: makefile -*-
 
 PERL_MODULES = \
     lib/Module/ScanDeps/Static.pm \
@@ -10,7 +11,9 @@ UNIT_TESTS = \
 	t/00-scandeps.t \
 	t/01-scandeps.t
 
-TARBALL = Module-ScanDeps-Static.tar.gz
+VERSION := $(shell perl -I lib -MModule::ScanDeps::Static -e 'print $$Module::ScanDeps::Static::VERSION;')
+
+TARBALL = Module-ScanDeps-Static-$(VERSION).tar.gz
 
 all: README.md $(TARBALL)
 
@@ -26,8 +29,8 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -H . \
 	   -T test-requires \
 	   -t t/ \
-	   -F postamble
-	cp $$(ls -1rt *.tar.gz | tail -1) $@
+	   -F postamble \
+	   -V Module::ScanDeps::VERSION
 
 README.md: $(PERL_MODULES)
 	pod2markdown $< > $@ || rm -f $@

@@ -4,13 +4,17 @@ Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req
 
 # SYNOPSIS
 
+    scandeps-static.pl [options] Module
+
+If "Module" is not provided, the script will read from STDIN.
+
     my $scanner = Module::ScanDeps::Static->new({ path => 'myfile.pl' });
     $scanner->parse;
     print $scanner->format_text;
 
 # DESCRIPTION
 
-This module is a mashup (and cleanup) of the \`/usr/lib/rpm/perl.req\`
+This module is a mashup (and cleanup) of the `/usr/lib/rpm/perl.req`
 file found in the rpm build tools library (see ["LICENSE"](#license)) below.
 
 Successful identification of the required Perl modules for a module or
@@ -26,18 +30,25 @@ Perl script or module.  It's not perfect and the regular expressions
 could use some polishing, but it works on a broad enough set of
 situations as to be useful.
 
-_NOTE: Only direct dependencies are returned by this module. If you
-want a recursive search for dependencies, use `scandeps.pl`_
+_Only direct dependencies are returned by this module. If you
+want a recursive search for dependencies, use `find-requires.pl`
+included in this distribution._
 
-_!!EXPERIMENTAL!!_
+# OPTIONS
 
-_The methods and output of this module are subject to revision!_
-
-# USAGE
-
-    scandeps-static.pl [options] Module
-
-If "Module" is not provided, the script will read from STDIN.
+    --add-version, -a        add version numbers to output
+    --no-add-version         don't add version numbers to output
+    --core                   include core modules (default)
+    --no-core                don't include core modules
+    --help, -h               help
+    --include-require, -i    include 'require'd modules
+    --no-include-require     don't include required modules
+    --json, -j               output JSON formatted list
+    --min-core-version, -m   minimum version of perl to consider core
+    --raw, -r                raw output
+    --separator, -s          separator for output (default: =>)
+    --text, -t               output as text (default)
+    --version, -v            verion
 
 ## Examples
 
@@ -45,7 +56,10 @@ If "Module" is not provided, the script will read from STDIN.
 
     scandeps-static.pl --json $(which scandeps-static.pl)
 
-## Options
+_Use the `find-requires` script included in this distribution to
+recurse directories and create dependency files like `cpanfile`_.
+
+# OPTION DETAILS
 
 - --add-version, -a, --no-add-version
 
@@ -89,7 +103,7 @@ If "Module" is not provided, the script will read from STDIN.
     using a specific version of Perl, then set the `min-core-version` to
     that version of Perl.
 
-    default: 5.8.9
+    default: $PERL\_VERSION
 
 - --separator, -s
 
@@ -131,7 +145,7 @@ the targets of `require` statements as dependencies, set the
     to any module or Perl script that is the argument of the `require`
     statement.
 
-- Allow detection of the `parent`, `base` statemens use of curly braces.
+- Allow detection of the `parent`, `base` statements use of curly braces.
 
     The regular expression and algorithm in `parse` has been enhanced to
     detect the use of curly braces in `use` or `parent` declarations.
@@ -140,7 +154,8 @@ the targets of `require` statements as dependencies, set the
 
     Use the `--no-core` option to ignore core modules.
 
-- Add the current version of installed module if version not explicitly specified.
+- Add the current version of an installed module if the version
+is not explicitly specified.
 
 # CAVEATS
 
@@ -219,7 +234,8 @@ After calling the `parse()` method, call this method to retrieve a
 hash containing the dependencies and (potentially) their version
 numbers.
 
-    $scanner->parse
+    $scanner->parse;
+    my $requires = $scanner->get_require;
 
 ## parse
 
@@ -240,7 +256,7 @@ numbers.
 
         my @dependencies = parse(\$script);
 
-Scans the specified input and returns a list Perl modulde dependencies.
+Scans the specified input and returns a list of Perl module dependencies.
 
 Use the `get_dependencies` method to retrieve the dependencies as a
 formatted string or as a list of dependency objects. Use the
@@ -270,7 +286,7 @@ As JSON:
 
     print $scanner->get_dependencies( format => 'text' )
 
-    Module::Name >= version
+    Module::Name => version
     ...
 
 In scalar context in the absence of an argument returns a JSON
@@ -279,23 +295,23 @@ contain the keys "name" and "version" for each dependency.
 
 # VERSION
 
-1.005
+1.007
 
 # AUTHOR
 
-This module is largely a lift and drop of Ken Este's \`perl.req\` script
+This module is largely a lift and drop of Ken Este's `perl.req` script
 lifted from rpm build tools.
 
 Ken Estes Mail.com kestes@staff.mail.com
 
-The method \`parse\` is a cleaned up version of \`process\_file\` from the
+The method `parse` is a cleaned up version of `process_file` from the
 same script.
 
 Rob Lauer - <bigfoot@cpan.org>
 
 # LICENSE
 
-This statement was lifted right from `perl.req`...
+This statement was lifted directly from `perl.req`...
 
 > _The entire code base may be distributed under the terms of the
 > GNU General Public License (GPL), which appears immediately below.

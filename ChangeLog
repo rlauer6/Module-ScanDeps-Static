@@ -1,3 +1,20 @@
+Sat Nov 23 07:37:37 2024  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.7.0]:
+	* Makefile
+	- get version from .pm for target tarball name
+	* lib/Module/ScanDeps/Static.pm
+	- require Module::ScanDeps::VERSION
+	- min core version = $PERL_VERSION
+	(min_core_version): new
+	(is_core): fix version comparisons
+	(main): cleanup help
+	* lib/Module/ScanDeps/VERSION.pm: new
+	* lib/Module/ScanDeps/FindRequires
+	- require Module::ScanDeps::VERSION
+	* bin/scandeps-static.pl: get version from ::VERSION file
+	* provides: + Module::ScanDeps::Static::VERSION
+
 Thu Nov 21 09:14:28 2024  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.006]:
