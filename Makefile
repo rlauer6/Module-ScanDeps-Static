@@ -30,7 +30,7 @@ $(TARBALL): $(PERL_MODULES) $(PERL_SCRIPTS) requires
 	   -T test-requires \
 	   -t t/ \
 	   -F postamble \
-	   -V Module::ScanDeps::VERSION
+	   -V Module::ScanDeps::Static::VERSION
 
 README.md: $(PERL_MODULES)
 	pod2markdown $< > $@ || rm -f $@
