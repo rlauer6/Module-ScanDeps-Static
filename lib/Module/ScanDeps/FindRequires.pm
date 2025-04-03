@@ -29,7 +29,7 @@ Readonly::Scalar our $FAILURE => 1;
 Readonly::Scalar our $MIN_PERL_VERSION => $PERL_VERSION;
 
 require Module::ScanDeps::Static::VERSION;
-our $VERSION = '1.7.4';
+our $VERSION = '1.7.5';
 
 use parent qw(CLI::Simple);
 

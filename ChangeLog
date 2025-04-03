@@ -1,5 +1,12 @@
 Thu Apr  3 13:22:59 2025  Rob Lauer  <rlauer6@comcast.net>
 
+	[1.7.5]:
+	* lib/Module/ScanDeps/Static.pm: version bump
+	* lib/Module/ScanDeps/Static/VERSION.pm: likewise
+	* lib/Module/ScanDeps/Static/FindRequires.pm: likewise
+	* bin/scandeps-static.pl: Module::ScanDeps::Static::VERSION
+	* postamble: fix $(DESTDIR)
+
 	[1.7.4]:
 	* lib/Module/ScanDeps/Static.pm: version bump
 	* lib/Module/ScanDeps/Static/VERSION.pm: likewise
