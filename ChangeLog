@@ -1,5 +1,13 @@
 Thu Apr  3 13:22:59 2025  Rob Lauer  <rlauer6@comcast.net>
 
+	[1.7.6]:
+	* lib/Module/ScanDeps/Static.pm: version bump
+	* lib/Module/ScanDeps/Static/VERSION.pm: likewise
+	* lib/Module/ScanDeps/Static/FindRequires.pm
+	- likewise
+	- keys % not supported anymore
+	* Makefile: make bump
+
 	[1.7.5]:
 	* lib/Module/ScanDeps/Static.pm: version bump
 	* lib/Module/ScanDeps/Static/VERSION.pm: likewise

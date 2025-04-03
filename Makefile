@@ -2,7 +2,8 @@
 
 PERL_MODULES = \
     lib/Module/ScanDeps/Static.pm \
-    lib/Module/ScanDeps/FindRequires.pm
+    lib/Module/ScanDeps/FindRequires.pm \
+    lib/Module/ScanDeps/Static/VERSION.pm
 
 PERL_SCRIPTS = \
     bin/scandeps-static.pl
@@ -41,6 +42,12 @@ check: $(PERL_MODULES)
 	PERL5LIB=$(builddir)/lib perl -wc $(PERL_MODULES)
 	perlcritic -1 $(PERL_MODULES)
 	$(MAKE) test
+
+bump:
+	version=$(VERSION); version=$$(echo "$${version##*.} 1 + p" | dc); echo $$version; \
+	for a in $(PERL_MODULES); do \
+	  perl -pi.bak -e "s/(VERSION = .*)\d+';\$$/\$${1}$$version';/" $$a; \
+	done
 
 test: $(TESTS)
 	prove -v t/
