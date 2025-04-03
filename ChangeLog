@@ -1,5 +1,12 @@
 Sat Nov 23 07:37:37 2024  Rob Lauer  <rlauer6@comcast.net>
 
+	[1.7.3]:
+	* lib/Module/ScanDeps/Static.pm: version bump
+	* lib/Module/ScanDeps/Static/VERSION.pm: likewise
+	* requires: +Progress::Any::*
+
+Sat Nov 23 07:37:37 2024  Rob Lauer  <rlauer6@comcast.net>
+
 	[1.7.1]:
 	* Makefile
 	- get version from .pm for target tarball name

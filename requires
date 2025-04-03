@@ -1,6 +1,9 @@
-Class::Accessor::Fast 0.51
-IO::Scalar 2.111
-Pod::Find 
-Readonly 2.05
-CLI::Simple 0.0.4
-JSON 4.10
+CLI::Simple
+Class::Accessor::Fast
+IO::Scalar
+JSON
+Pod::Find
+Progress::Any
+Progress::Any::Output
+Progress::Any::Output::TermProgressBarColor
+Readonly
