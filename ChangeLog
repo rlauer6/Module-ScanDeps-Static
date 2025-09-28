@@ -1,3 +1,21 @@
+Sun Sep 28 15:06:51 2025  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.7.8]:
+	* Makefile: get rid of postambe
+	* bin/find-requires.ps1: new
+	* bin/find-requires: new
+	* lib/Module/ScanDeps/FindRequires.pm: bump version
+	* lib/Module/ScanDeps/Static.pm: likewise
+
+Sun Sep 28 07:50:25 2025  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.7.7]:
+	* lib/Module/ScanDeps/Static.pm: version bump
+	* lib/Module/ScanDeps/Static/VERSION.pm: likewise
+	* lib/Module/ScanDeps/Static/FindRequires.pm
+	* postamble: remove pass DESTDIR as env var
+	* requires: require CLI::Simple 1.0.6
+
 Thu Apr  3 13:22:59 2025  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.7.6]:
