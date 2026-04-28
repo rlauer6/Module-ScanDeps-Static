@@ -1,3 +1,23 @@
+# Table of Contents
+
+* [NAME](#name)
+* [SYNOPSIS](#synopsis)
+* [DESCRIPTION](#description)
+* [OPTIONS](#options)
+  * [Examples](#examples)
+* [OPTION DETAILS](#option-details)
+* [WHAT IS A DEPENDENCY?](#what-is-a-dependency)
+* [MINOR IMPROVEMENTS TO `perl.req`](#minor-improvements-to-perlreq)
+* [CAVEATS](#caveats)
+* [METHODS AND SUBROUTINES](#methods-and-subroutines)
+  * [new](#new)
+    * [Options](#options)
+  * [get\_require](#get\require)
+  * [parse](#parse)
+  * [get\_dependencies](#get\dependencies)
+* [VERSION](#version)
+* [AUTHOR](#author)
+* [LICENSE](#license)
 # NAME
 
 Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req

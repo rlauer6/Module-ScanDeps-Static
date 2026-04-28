@@ -62,7 +62,7 @@ our $HAVE_VERSION = eval {
   return $TRUE;
 };
 
-our $VERSION = '1.7.8';
+our $VERSION = '@PACKAGE_VERSION@';
 
 caller or __PACKAGE__->main();
 
@@ -202,7 +202,7 @@ sub is_core {
 }
 
 ########################################################################
-sub parse_line {  ## no critic (Subroutines::ProhibitExcessComplexity)
+sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 ########################################################################
   my ( $self, $line ) = @_;
 
@@ -486,7 +486,7 @@ sub parse {
   if ( my $file = $self->get_path ) {
     chomp $file;
 
-    open my $fh, '<', $file  ## no critic (InputOutput::RequireBriefOpen)
+    open my $fh, '<', $file ## no critic (InputOutput::RequireBriefOpen)
       or croak "could not open file '$file' for reading: $OS_ERROR";
 
     $self->set_handle($fh);
@@ -496,7 +496,7 @@ sub parse {
     $self->set_handle( IO::Scalar->new($script) );
   }
   elsif ( !$self->get_handle ) {
-    open my $fh, '<&STDIN'   ## no critic (InputOutput::RequireBriefOpen)
+    open my $fh, '<', \*STDIN ## no critic (InputOutput::RequireBriefOpen)
       or croak 'could not open STDIN';
 
     $self->set_handle($fh);

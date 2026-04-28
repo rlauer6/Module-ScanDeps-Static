@@ -1,3 +1,39 @@
+Tue Apr 28 05:42:41 2026  Rob Lauer  <rclauer@gmail.com>
+
+	[1.8.0]: CPAN::Maker::Bootstrapper
+	* release-notes-1.8.0.md: new
+	* .gitignore
+	- + buildspec.yml.tmpl, test.t.tmpl
+	* lib/Module/ScanDeps/FindRequires.pm.in: renamed
+	* lib/Module/ScanDeps/Static.pm.in: renamed
+	* Makefile
+	- essentially a new Makefile from CPAN::Maker::Bootstrapper
+	- uses make-cpan-dist.pl & buildspec.yml
+	* README.md: generated (with TOC)
+	* test-requires: removed Test::More
+
+	[1.8.0]: new
+	* .includes/git.mk: new
+	* .includes/help.mk: new
+	* .includes/perl.mk: new
+	* .includes/release-notes.mk: new
+	* .includes/update.mk: new
+	* .includes/upgrade.mk: new
+	* .includes/version.mk: new
+	* VERSION: new
+	* buildspec.yml: new
+	* cpanfile: new
+
+	[1.8.0]: removed
+	* lib/Module/ScanDeps/Static/VERSION.pm
+	- deleted, use @PACKAGE_VERSION@
+	* provides: deleted
+
+	[1.8.0]: renamed
+	* bin/find-requires.in: renamed
+	* bin/find-requires.ps1.in: renamed
+	* bin/scandeps-static.pl.in: renamed
+
 Sun Sep 28 15:06:51 2025  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.7.8]:

@@ -1,0 +1,10 @@
+requires "Progress::Any::Output::TermProgressBarColor", "";
+requires "CLI::Simple", "2.0.0";
+requires "Class::Accessor::Fast", "0.51";
+requires "IO::Scalar", "2.113";
+requires "JSON", "4.10";
+requires "Progress::Any", "0.220";
+requires "Progress::Any::Output", "0.220";
+requires "Readonly", "2.05";
+requires "perl", "5.010";
+requires "version", "0.9930";
