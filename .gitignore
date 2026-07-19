@@ -1,3 +1,4 @@
+buildspec.yml.current
 **/*.sh
 module.pm.tmpl
 buildspec.yml.tmpl

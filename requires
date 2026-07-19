@@ -1,5 +1,5 @@
 +Progress::Any::Output::TermProgressBarColor 
-CLI::Simple 2.0.0
+CLI::Simple 2.1.0
 Class::Accessor::Fast 0.51
 IO::Scalar 2.113
 JSON 4.10
@@ -7,4 +7,3 @@ Progress::Any 0.220
 Progress::Any::Output 0.220
 Readonly 2.05
 perl 5.010
-version 0.9930

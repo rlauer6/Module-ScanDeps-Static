@@ -1,3 +1,25 @@
+Sun Jul 19 09:17:46 2026  Rob Lauer  <rclauer@gmail.com>
+
+	[1.8.1]:
+	* release-notes/release-notes-1.8.1.md: new
+	* release-notes.md: new
+	* .gitignore: +buildspec.yml.current
+	* .includes/git.mk: updated by CPAN::Maker::Bootstrapper
+	* .includes/perl.mk: likewise
+	* .includes/release-notes.mk: likewise
+	* .includes/update.mk: likewise
+	* Makefile: likewise
+	* VERSION: bump
+	* buildspec.yml: _ => -
+	* lib/Module/ScanDeps/Static.pm.in
+	- POD updates
+	(parse_line)
+	- support for Moo/Role::Tiny::With 'with'
+	(to_rpm): fixed
+	* requires: -version, CLI::Simple 2.1.0
+	* cpanfile: likewise
+        * bin/find-requires.in: refactored
+
 Tue Apr 28 05:42:41 2026  Rob Lauer  <rclauer@gmail.com>
 
 	[1.8.0]: CPAN::Maker::Bootstrapper
