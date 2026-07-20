@@ -1,3 +1,4 @@
++Pod::Find 0
 +Progress::Any::Output::TermProgressBarColor 
 CLI::Simple 2.1.0
 Class::Accessor::Fast 0.51

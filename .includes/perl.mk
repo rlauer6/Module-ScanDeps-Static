@@ -235,8 +235,25 @@ lint: ## run all linting tools (tidy + critic)
 	$(NO_ECHO)$(MAKE) tidy critic
 
 # dependencies
+#
+# deps.mk has a self-remake rule (see Makefile: `deps.mk: $(PERL_MODULES)`)
+# that requires the built .pm files to exist. GNU Make always checks
+# whether included makefiles are up to date *before* running the
+# requested goal -- including `clean` -- so an unguarded include here
+# causes `make clean` to build every .pm file and then immediately
+# delete them. Skip the include for clean/distclean goals so make
+# doesn't build anything it's only about to remove.
+ifeq ($(filter clean distclean,$(MAKECMDGOALS)),)
 -include deps.mk
+endif
 
 # custom make rules
+#
+# project.mk is plain data (module dependency edges) with no rule to
+# remake itself, so including it doesn't trigger the same forced-build
+# problem as deps.mk. It's also the conventional place to drop extra
+# clean-local:: recipes, so it must stay included unconditionally --
+# guarding it the way deps.mk is guarded above would silently skip
+# those clean-local:: hooks whenever `make clean` runs.
 -include project.mk
 
