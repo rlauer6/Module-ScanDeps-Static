@@ -6,6 +6,9 @@ use warnings;
 use 5.010;
 
 use Carp;
+use CLI::Simple::Utils qw(slurp);
+use CLI::Simple::Constants qw(:booleans :chars);
+
 use Data::Dumper;
 use English qw( -no_match_vars );
 use ExtUtils::MM;
@@ -14,7 +17,6 @@ use JSON;
 use Module::CoreList;
 use Pod::Usage;
 use Pod::Find qw( pod_where );
-use Readonly;
 use IO::Scalar;
 use List::Util qw( max none );
 use version;
@@ -39,23 +41,9 @@ our @OPTIONS = qw(
 __PACKAGE__->follow_best_practice;
 __PACKAGE__->mk_accessors(@OPTIONS);
 
-# booleans
-Readonly my $TRUE  => 1;
-Readonly my $FALSE => 0;
+use Readonly;
 
-# shell success/failure
-Readonly my $SUCCESS => 0;
-Readonly my $FAILURE => 1;
-
-# chars
-Readonly my $COMMA        => q{,};
-Readonly my $DOUBLE_COLON => q{::};
-Readonly my $EMPTY        => q{};
-Readonly my $NEWLINE      => qq{\n};
-Readonly my $SLASH        => q{/};
-Readonly my $SPACE        => q{ };
-
-Readonly my $DEFAULT_MIN_CORE_VERSION => $PERL_VERSION;
+Readonly::Scalar my $DEFAULT_MIN_CORE_VERSION => $PERL_VERSION;
 
 our $HAVE_VERSION = eval {
   require version;
@@ -177,26 +165,20 @@ sub is_core {
 
   my $core = $FALSE;
 
-  my @ms = Module::CoreList->find_modules(qr/\A$module\z/xsm);
+  my $first_release = Module::CoreList->first_release($module);
 
-  if (@ms) {
-    my $first_release = Module::CoreList->first_release($module);
+  my $removed_version = Module::CoreList->removed_from($module);
 
-    my $removed_version = Module::CoreList->removed_from($module);
+  my $min_core_version = $self->min_core_version();
 
-    my $min_core_version = $self->min_core_version();
+  # consider a module core if its first release was less than some
+  # version of Perl. This is done because CPAN testers don't seem to
+  # test modules against Perls that are older than 5.8.9 - however,
+  # some modules like JSON::PP did not appear until after 5.10
 
-    # consider a module core if its first release was less than some
-    # version of Perl. This is done because CPAN testers don't seem to
-    # test modules against Perls that are older than 5.8.9 - however,
-    # some modules like JSON::PP did not appear until after 5.10
-
-    if ($removed_version) {
-      $core = $removed_version > $min_core_version;
-    }
-    elsif ($first_release) {
-      $core = $first_release <= $min_core_version;
-    }
+  # any removed module must be considered non-core
+  if ( !$removed_version && $first_release ) {
+    $core = $first_release <= $min_core_version;
   }
 
   return $core;
@@ -721,7 +703,7 @@ sub format_text {
     push @output, sprintf $format, $name, $separator, $version // $EMPTY;
   }
 
-  return join $NEWLINE, @output, $EMPTY;
+  return join "\n", @output, $EMPTY;
 }
 
 ########################################################################
@@ -761,7 +743,7 @@ sub to_rpm {
     }
   }
 
-  return join $NEWLINE, @rpm_deps, $EMPTY;
+  return join "\n", @rpm_deps, $EMPTY;
 }
 
 ########################################################################
@@ -769,13 +751,13 @@ sub main {
 ########################################################################
 
   my %options = (
-    core               => $TRUE,
     'add-version'      => $TRUE,
+    'core'             => $TRUE,
     'include-require'  => $TRUE,
     'json'             => $FALSE,
-    'text'             => $TRUE,
-    'separator'        => q{ => },
     'min-core-version' => '5.8.9',
+    'separator'        => q{ => },
+    'text'             => $TRUE,
   );
 
   my @option_specs = qw(
@@ -789,6 +771,8 @@ sub main {
     separator|s=s
     text|t
     version|v
+    path|p=s
+    file-list|L=s
   );
 
   GetOptions( \%options, @option_specs );
@@ -812,15 +796,37 @@ sub main {
 
   $options{'path'} = shift @ARGV;
 
-  my $scanner = Module::ScanDeps::Static->new( {%options} );
-  $scanner->parse;
+  my @file_list = eval {
 
-  if ( $options{'json'} ) {
-    print $scanner->get_dependencies( format => 'json' );
+    if ( my $file_list = $options{'file-list'} ) {
+      my $list = slurp($file_list);
+
+      delete $options{'file-list'};
+      $options{json} = $FALSE;
+
+      return split /\n/xsm, $list;
+    }
+
+    return $options{'path'};
+  };
+
+  my @deps;
+
+  foreach (@file_list) {
+    $options{path} = $_;
+
+    my $scanner = Module::ScanDeps::Static->new( \%options );
+    $scanner->parse;
+
+    if ( $options{'json'} ) {
+      push @deps, $scanner->get_dependencies( format => 'json' );
+    }
+    else {
+      push @deps, $scanner->get_dependencies( format => 'text' );
+    }
   }
-  else {
-    print $scanner->get_dependencies( format => 'text' );
-  }
+
+  print {*STDOUT} "@deps";
 
   exit $SUCCESS;
 }
@@ -873,11 +879,13 @@ included in this distribution.>
  --no-add-version         don't add version numbers to output
  --core                   include core modules (default)
  --no-core                don't include core modules
+ --file-list, -L PATH     scan a batch of files listed one per line in PATH
  --help, -h               help
  --include-require, -i    include 'require'd modules
  --no-include-require     don't include required modules
  --json, -j               output JSON formatted list
  --min-core-version, -m   minimum version of perl to consider core
+ --path, -p PATH          file to scan (alternative to the positional argument)
  --raw, -r                raw output
  --separator, -s          separator for output (default: =>)
  --text, -t               output as text (default)
@@ -910,6 +918,26 @@ description of how core modules are identified.
 
 default: B<--core>
 
+=item --file-list, -L PATH
+
+Scan a batch of files in a single process instead of one file per
+invocation. C<PATH> is a file containing one source file path per
+line (relative or absolute); each listed file is scanned in turn and
+the results are aggregated. There is currently no way to supply the
+list via C<STDIN> - C<PATH> must be a real file.
+
+Batching this way avoids paying Perl's own process-startup cost and
+the C<Module::CoreList> module-load cost (non-trivial - loading
+C<Module::CoreList> alone is roughly an order of magnitude slower
+than a bare C<perl> startup) once per file scanned, which matters a
+great deal once a project has more than a handful of source files.
+
+Because more than one JSON document cannot be safely concatenated
+into a single valid JSON result, C<--json> is silently ignored
+whenever C<--file-list> resolves to more than one file - output is
+always text in that case. If the list happens to contain exactly one
+file, C<--json> is honored normally.
+
 =item --help, -h
 
 Show usage.
@@ -923,7 +951,9 @@ default: B<--include-require>
 
 =item --json, -j
 
-Output the dependency list as a JSON encode string.
+Output the dependency list as a JSON encode string. Silently ignored
+in favor of text output when combined with C<--file-list> and more
+than one file is being scanned - see L</--file-list, -L PATH>.
 
 =item --min-core-version, -m
 
@@ -932,19 +962,34 @@ consider some modules non-core if they did not appear until after the
 C<min-core-version>.
 
 Core modules are identified using C<Module::CoreList> and comparing
-the first release value of the module with the the minimum version of
+the first release value of the module with the minimum version of
 Perl considered as a baseline.  If you're using this module to
 identify the dependencies for your script B<AND> you know you will be
 using a specific version of Perl, then set the C<min-core-version> to
 that version of Perl.
 
+Note: this only governs the "not yet in core as of my baseline" case.
+A module that was core at some point but has since been B<removed>
+from core is always treated as non-core, regardless of
+C<min-core-version> - there is no way to know which specific Perl an
+end user actually has installed, so the only safe answer once a
+module has ever been removed is to require it explicitly. See
+L</is_core> for details.
+
 default: C<5.8.9> (the C<Module::ScanDeps::Static> constructor's
 C<min_core_version> option defaults this to the running Perl's version
 instead)
 
+=item --path, -p PATH
+
+Path to the file to scan. Equivalent to supplying the path as a bare
+positional argument; provided as a named option for clarity in
+scripts that build up the command line programmatically. Ignored if
+C<--file-list> is also given.
+
 =item --separator, -s
 
-Use the specified sting to separate modules and version numbers in formatted output.
+Use the specified string to separate modules and version numbers in formatted output.
 
 default: ' => '
 
@@ -1202,10 +1247,19 @@ are treated as a seed list and prepended to the results.
  my $bool = $scanner->is_core($module);
  my $bool = $scanner->is_core("$module $version");
 
-Returns true if C<$module> is considered a core module. A module is
-core when C<Module::CoreList> reports its first release at or before
-C<min_core_version> (and, if it was later removed from core, only if it
-was removed after that version).
+Returns true if C<$module> is considered core. A module is core when
+C<Module::CoreList> reports its first release at or before
+C<min_core_version> B<and> the module has never been removed from
+core at any point in its history.
+
+A module that was core at some earlier Perl but has since been
+removed is always treated as non-core, regardless of how
+C<min_core_version> compares to the version it was removed at. There
+is no way to know which Perl an end user actually has installed - a
+version comparison against a single reference point only protects
+against removals that happen to fall on one particular side of it, so
+the only safe answer once a module has ever been removed is to always
+require it explicitly.
 
 =head2 min_core_version
 
@@ -1250,7 +1304,7 @@ false.
 
 =head1 VERSION
 
-This documentation refers to version @PACKAGE_VERSION@
+This documentation refers to version 1.8.2
 
 =head1 AUTHOR
 

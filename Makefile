@@ -117,6 +117,7 @@ cpanfile: requires test-requires
 	fi
 
 $(TARBALL): $(DEPS) \
+    check-syntax \
     $(if $(tidy_on), $(PERL_MODULES:%=%.tdy) $(PERL_BIN_FILES:%=%.tdy)) \
     $(if $(critic_on), $(PERL_MODULES:%=%.crit) $(PERL_BIN_FILES:%=%.crit))
 	$(NO_ECHO)if [[ -z "$(NO_COLOR)" ]]; then \
@@ -203,13 +204,16 @@ define scan-deps
 	if [[ -n "$$min_perl_version" ]]; then \
 	  min_perl_version="-m $$min_perl_version"; \
 	fi; \
+	file_list=$$(mktemp); cleanfiles="$$cleanfiles $$file_list"; \
 	for d in $(2); do \
 	  for a in $$(find $$d -name "$(3)"); do \
 	    perl -ne 'print "$$1\n" if /^package +(.*?);/' $$a >> $$packages; \
-	    echo >&2 "Scanning...$$a"; \
-	    $(SCANDEPS) -r $$min_perl_version --no-core $$a | awk '{printf "%s %s\n", $$1,$$2}' >> $$dep_requires; \
+	    echo >&2 "Adding $$a to list of files to be scanned..."; \
+	    echo $$a >>$$file_list; \
 	  done; \
 	done; \
+	sort -u $$file_list > file_list.tmp; cleanfiles="$$cleanfiles file_list.tmp"; \
+	$(SCANDEPS) -r $$min_perl_version --file-list file_list.tmp --no-core | awk '{printf "%s %s\n", $$1,$$2}' > $$dep_requires; \
 	if test -s "$$dep_requires"; then \
 	  sort -u $$dep_requires > $(1).tmp; \
 	  grep -vFf "$$packages" "$(1).tmp" > $(1); \
@@ -217,6 +221,7 @@ define scan-deps
 	  touch $(1); \
 	fi
 endef
+
 
 define filter_requires = 
 
@@ -423,6 +428,15 @@ test: $(GSOURCE_FILES) ## run unit tests
 
 check: $(GSOURCE_FILES) ## syntax check and create source from .in file
 
-deps.mk: $(PERL_MODULES)
+# deps.mk depends on SOURCE (.pm.in), not the built .pm targets.
+# cmb create-deps already scans .pm.in directly, so this makes deps.mk
+# regenerate purely from source edits -- no build artifacts involved,
+# so there's no chicken-and-egg with $(PERL_MODULES) needing to be
+# built before deps.mk can be regenerated, and 'make clean' can never
+# trigger a rebuild through this include (clean doesn't touch .pm.in).
+deps.mk: $(SOURCE_FILES:%=%.in)
 	$(NO_ECHO)cmb create-deps > $@
 
+.PHONY: package
+package: clean ## run lint & scan
+	$(MAKE) LINT=on SCAN=on
