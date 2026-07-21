@@ -20,6 +20,9 @@ PERLCRITICRC ?= $(shell $(PERL) -MCPAN::Maker::ConfigReader \
 
 PERLWC_SKIP ?=
 
+PERLCRITIC_SEVERITY ?= 5
+PERLCRITIC_THEME ?= pbp
+
 lint_off = $(filter off,$(shell echo $(LINT) | tr '[:upper:]' '[:lower:]'))
 
 # normalize - 'off' or empty disables, anything else enables
@@ -136,9 +139,11 @@ ifneq ($(critic_on),)
 	  exit 1; \
 	fi; \
 	echo >&2 "Critiquing...$<"; \
-	$(PERLCRITIC) --profile="$(PERLCRITICRC)" $< 1>&2 \
-	  || { echo "ERROR: $< fails perlcritic"; rm -f "$@"; exit 1; }; \
-	touch "$@"
+	set -eo pipefail; \
+	$(PERLCRITIC) \
+	  --theme=$(PERLCRITIC_THEME) \
+	  --severity=$(PERLCRITIC_SEVERITY) \
+	  --profile="$(PERLCRITICRC)" $<  2>&1 | tee $@ || { echo "ERROR: $< fails perlcritic"; exit 1; };
 else
 	$(NO_ECHO)touch "$@"
 endif
@@ -169,9 +174,12 @@ ifneq ($(critic_on),)
 	  echo "ERROR: perlcritic not found - install with: cpanm Perl::Critic"; \
 	  exit 1; \
 	fi; \
-	$(PERLCRITIC) --profile="$(PERLCRITICRC)" $< \
-	  || { echo "ERROR: $< fails perlcritic"; rm -f "$@"; exit 1; }; \
-	touch "$@"
+	echo >&2 "Critiquing...$<"; \
+	set -eo pipefail; \
+	$(PERLCRITIC) \
+	  --theme=$(PERLCRITIC_THEME) \
+	  --severity=$(PERLCRITIC_SEVERITY) \
+	  --profile="$(PERLCRITICRC)" $<  2>&1 | tee $@ || { echo "ERROR: $< fails perlcritic"; exit 1; };
 else
 	$(NO_ECHO)touch "$@"
 endif
@@ -256,10 +264,12 @@ critic: ## run perlcritic on all source files
 	  echo "ERROR: perlcritic not found - install with: cpanm Perl::Critic"; \
 	  exit 1; \
 	fi; \
-	$(MAKE) SYNTAX_CHECKING=on PERLTIDYRC="" PERLCRITICRC=""; \
+	$(MAKE) check-syntax SYNTAX_CHECKING=on PERLTIDYRC="" PERLCRITICRC=""; \
         PERL_SCRIPTS=$$(find bin/ -name '*.pl'); \
 	$(PERLCRITIC) --profile="$(PERLCRITICRC)" $(PERL_MODULES); \
-	test -n "$$PERL_SCRIPTS" && $(PERLCRITIC) --profile="$(PERLCRITICRC)" $$PERL_SCRIPTS
+	if [[ -n "$$PERL_SCRIPTS" ]]; then \
+	  $(PERLCRITIC) --profile="$(PERLCRITICRC)" $$PERL_SCRIPTS; \
+	fi
 
 lint: ## run all linting tools (tidy + critic)
 	$(NO_ECHO)$(MAKE) tidy critic
