@@ -17,6 +17,7 @@ extra-files:
   - ChangeLog
   - share:
       - README.md
+      - release-notes.md
 resources:
   bugtracker:
     mailto: rclauer@gmail.com

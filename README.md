@@ -32,7 +32,7 @@ Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req
 
 # SYNOPSIS
 
-    scandeps-static.pl [options] Module
+    scandeps-static [options] Module
 
 If "Module" is not provided, the script will read from STDIN.
 
@@ -82,9 +82,9 @@ included in this distribution._
 
 ## Examples
 
-    scandeps-static.pl --no-core $(which scandeps-static.pl)
+    scandeps-static --no-core lib/Some/Module.pm
 
-    scandeps-static.pl --json $(which scandeps-static.pl)
+    scandeps-static --json lib/Some/Module.pm
 
 _Use the `find-requires` script included in this distribution to
 recurse directories and create dependency files like `cpanfile`_.
@@ -196,7 +196,8 @@ recurse directories and create dependency files like `cpanfile`_.
 
 For the purposes of this module, dependencies are identified by
 looking for Perl modules and other Perl artifacts declared using
-`use`, `require`, `parent`, or `base`.
+`use`, `require`, `parent`, or `base`. The script will also
+consider Moo/Role::Tiny modules include using `with`.
 
 If the module contains a `require` statement, by default the
 `require` must be flush up against the left edge of your script

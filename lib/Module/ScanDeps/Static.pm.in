@@ -8,7 +8,6 @@ use 5.010;
 use Carp;
 use CLI::Simple::Utils qw(slurp);
 use CLI::Simple::Constants qw(:booleans :chars);
-
 use Data::Dumper;
 use English qw( -no_match_vars );
 use ExtUtils::MM;
@@ -21,78 +20,16 @@ use IO::Scalar;
 use List::Util qw( max none );
 use version;
 
-use parent qw( Class::Accessor::Fast );
-
-our @OPTIONS = qw(
-  add_version
-  core
-  handle
-  include_require
-  json
-  min_core_version
-  path
-  perlreq
-  raw
-  require
-  separator
-  text
-);
-
-__PACKAGE__->follow_best_practice;
-__PACKAGE__->mk_accessors(@OPTIONS);
+use parent qw( CLI::Simple);
 
 use Readonly;
-
 Readonly::Scalar my $DEFAULT_MIN_CORE_VERSION => $PERL_VERSION;
-
-our $HAVE_VERSION = eval {
-  require version;
-  return $TRUE;
-};
 
 our $VERSION = '@PACKAGE_VERSION@';
 
-caller or __PACKAGE__->main();
+__PACKAGE__->use_log4perl( level => 'info' );
 
-########################################################################
-sub new {
-########################################################################
-  my ( $class, $args ) = @_;
-
-  $args = $args || {};
-
-  my %options = %{$args};
-
-  foreach my $k ( keys %options ) {
-    my $v = $options{$k};
-
-    delete $options{$k};
-
-    $k =~ s/-/_/gxsm;
-
-    $options{$k} = $v;
-  }
-
-  # defaults
-  $options{core}             //= $TRUE;
-  $options{include_require}  //= $FALSE;
-  $options{add_version}      //= $TRUE;
-  $options{min_core_version} //= $DEFAULT_MIN_CORE_VERSION;
-  $options{text}             //= $TRUE;
-
-  # check for unknown options
-  foreach my $o ( keys %options ) {
-    die "unknown option $o\n"
-      if none { $_ eq $o } @OPTIONS;
-  }
-
-  my $self = $class->SUPER::new( \%options );
-
-  $self->set_perlreq( {} );
-  $self->set_require( {} );
-
-  return $self;
-}
+caller or exit __PACKAGE__->main();
 
 ########################################################################
 sub make_path_from_module {
@@ -171,6 +108,14 @@ sub is_core {
 
   my $min_core_version = $self->min_core_version();
 
+  $self->get_logger->debug(
+    sprintf 'module: %s first_release: %s removed_version: %s min_core_version: %s',
+    $module_w_version,
+    $first_release   // q{-},
+    $removed_version // q{-},
+    $min_core_version,
+  );
+
   # consider a module core if its first release was less than some
   # version of Perl. This is done because CPAN testers don't seem to
   # test modules against Perls that are older than 5.8.9 - however,
@@ -180,6 +125,8 @@ sub is_core {
   if ( !$removed_version && $first_release ) {
     $core = $first_release <= $min_core_version;
   }
+
+  $self->get_logger->debug( sprintf 'module: %s is %score', $module_w_version, $core ? q{} : 'NOT ' );
 
   return $core;
 }
@@ -594,7 +541,7 @@ sub add_require {
   my $oldver = $require->{$module};
 
   if ($oldver) {
-    if ( $HAVE_VERSION && $newver && version->new($oldver) < $newver ) {
+    if ( $newver && version->new($oldver) < $newver ) {
       $require->{$module} = $newver;
     }
   }
@@ -747,88 +694,217 @@ sub to_rpm {
 }
 
 ########################################################################
+sub _extra_options {
+########################################################################
+  return [qw(perlreq require handle files)];
+}
+
+########################################################################
+sub _option_specs {
+########################################################################
+  return [
+    qw(
+      add-version|a!
+      core|c!
+      help|h
+      include-require|i!
+      json|j
+      log-level|l
+      min-core-version|m=s
+      raw|r
+      separator|s=s
+      text|t
+      version|v
+      path|p=s
+      file-list|L=s
+    )
+  ];
+}
+
+########################################################################
+sub _default_options {
+########################################################################
+  return {
+    add_version      => $TRUE,
+    core             => $TRUE,
+    include_require  => $TRUE,
+    json             => $FALSE,
+    min_core_version => '5.8.9',
+    separator        => q{ => },
+    text             => $TRUE,
+  };
+}
+
+########################################################################
+sub new {
+########################################################################
+  my ( $class, $options ) = @_;
+
+  # extra_options (perlreq, require, handle, files) are accessor-only
+  # fields -- CLI::Simple creates get_X/set_X for them but never
+  # populates them via GetOptions, since they aren't part of
+  # option_specs at all (and in handle's case, can't be: a filehandle
+  # reference isn't representable as a command-line string). Pull
+  # these out before building @argv and set them directly on the
+  # constructed object instead.
+  my %is_extra = map { $_ => 1 } @{ _extra_options() };
+
+  my %extra_values;
+  my %cli_values;
+
+  foreach my $o ( keys %{$options} ) {
+    if ( $is_extra{$o} ) {
+      $extra_values{$o} = $options->{$o};
+    }
+    else {
+      $cli_values{$o} = $options->{$o};
+    }
+  }
+
+  # classify each known option_spec as negatable ('!'), plain boolean
+  # (no type suffix at all -- presence-only, no --no-X form), or
+  # value-taking ('=s' etc.), so the hashref -> @ARGV translation below
+  # can represent each key correctly instead of treating them all the
+  # same way.
+  my %spec_type;
+
+  foreach my $spec ( @{ _option_specs() } ) {
+    my ($name) = split /[^\w-]/xsm, $spec;
+
+    if ( $spec =~ /[!]\z/xsm ) {
+      $spec_type{$name} = 'negatable';
+    }
+    elsif ( $spec =~ /[=:]/xsm ) {
+      $spec_type{$name} = 'value';
+    }
+    else {
+      $spec_type{$name} = 'boolean';
+    }
+  }
+
+  my @argv;
+
+  foreach my $o ( keys %cli_values ) {
+    ( my $dashed = $o ) =~ s/_/-/gxsm;
+
+    my $arg_name = length $dashed == 1 ? "-$dashed" : "--$dashed";
+
+    my $type = $spec_type{$dashed};
+
+    if ( !defined $type ) {
+      # unrecognized key that isn't an extra_options field either --
+      # not something we know how to represent; pass through as-is
+      # and let GetOptions report the error.
+      push @argv, ( $arg_name => $cli_values{$o} );
+    }
+    elsif ( $type eq 'negatable' ) {
+      push @argv, $cli_values{$o} ? $arg_name : "--no-$dashed";
+    }
+    elsif ( $type eq 'boolean' ) {
+      # no negated form exists for these -- omit entirely when false
+      # rather than emitting a flag GetOptions won't recognize.
+      push @argv, $arg_name if $cli_values{$o};
+    }
+    elsif ( defined $cli_values{$o} ) {
+      push @argv, ( $arg_name => $cli_values{$o} );
+    }
+    else {
+      push @argv, $arg_name;
+    }
+  }
+
+  local @ARGV = @argv;
+
+  my $self = __PACKAGE__->main($TRUE);
+
+  foreach my $k ( keys %extra_values ) {
+    my $setter = "set_$k";
+    $self->$setter( $extra_values{$k} );
+  }
+
+  return $self;
+}
+
+########################################################################
 sub main {
 ########################################################################
+  my ( $class, $setup ) = @_;
 
-  my %options = (
-    'add-version'      => $TRUE,
-    'core'             => $TRUE,
-    'include-require'  => $TRUE,
-    'json'             => $FALSE,
-    'min-core-version' => '5.8.9',
-    'separator'        => q{ => },
-    'text'             => $TRUE,
+  my $cli = __PACKAGE__->SUPER::new(
+    commands         => { scan => \&cmd_scan },
+    option_specs     => _option_specs(),
+    default_options  => _default_options(),
+    extra_options    => _extra_options(),
+    validate_command => $FALSE,
   );
 
-  my @option_specs = qw(
-    add-version|a!
-    core|c!
-    help|h
-    include-require|i!
-    json|j
-    min-core-version|m=s
-    raw|r
-    separator|s=s
-    text|t
-    version|v
-    path|p=s
-    file-list|L=s
-  );
+  return $setup ? $cli : return $cli->run;
+}
 
-  GetOptions( \%options, @option_specs );
+########################################################################
+sub init {
+########################################################################
+  my ($self) = @_;
 
-  if ( $options{'version'} ) {
-    pod2usage(
-      -exitval  => 1,
-      -input    => pod_where( { -inc => 1 }, __PACKAGE__ ),
-      -sections => 'VERSION|NAME|AUTHOR',
-      -verbose  => 99,
-    );
+  my @args = $self->get_args;
+
+  if ( !@args ) {
+    $self->command_args( $self->command() );  # set the args to the command
+    $self->command('scan');  # set the command to your default
   }
-
-  if ( $options{'help'} ) {
-    pod2usage(
-      -exitval => 1,
-      -input   => pod_where( { -inc => 1 }, __PACKAGE__ ),
-      -verbose => 1,
-    );
+  else {
+    die "ERROR: unknown command\n"
+      if !$self->commands->{ $self->command };  # validate the command
   }
-
-  $options{'path'} = shift @ARGV;
 
   my @file_list = eval {
 
-    if ( my $file_list = $options{'file-list'} ) {
+    if ( my $file_list = $self->get_file_list ) {
       my $list = slurp($file_list);
 
-      delete $options{'file-list'};
-      $options{json} = $FALSE;
+      $self->set_json($FALSE);
 
       return split /\n/xsm, $list;
     }
 
-    return $options{'path'};
+    return $self->get_path
+      if $self->get_path;
+
+    return $self->get_args;
   };
+
+  $self->set_files( \@file_list );
+
+  $self->set_perlreq( {} );
+
+  $self->set_require( {} );
+
+  return;
+}
+
+########################################################################
+sub cmd_scan {
+########################################################################
+  my ($self) = @_;
 
   my @deps;
 
-  foreach (@file_list) {
-    $options{path} = $_;
+  foreach my $file ( @{ $self->get_files } ) {
+    $self->set_path($file);
 
-    my $scanner = Module::ScanDeps::Static->new( \%options );
-    $scanner->parse;
+    $self->parse;
 
-    if ( $options{'json'} ) {
-      push @deps, $scanner->get_dependencies( format => 'json' );
+    if ( $self->get_json ) {
+      push @deps, $self->get_dependencies( format => 'json' );
     }
     else {
-      push @deps, $scanner->get_dependencies( format => 'text' );
+      push @deps, $self->get_dependencies( format => 'text' );
     }
   }
 
   print {*STDOUT} "@deps";
 
-  exit $SUCCESS;
+  return $SUCCESS;
 }
 
 1;
@@ -843,7 +919,7 @@ Module::ScanDeps::Static - a cleanup of rpmbuild's perl.req
 
 =head1 SYNOPSIS
 
- scandeps-static.pl [options] Module
+ scandeps-static [options] Module
 
 If "Module" is not provided, the script will read from STDIN.
 
@@ -893,9 +969,9 @@ included in this distribution.>
 
 =head2 Examples
 
- scandeps-static.pl --no-core $(which scandeps-static.pl)
+ scandeps-static --no-core lib/Some/Module.pm
 
- scandeps-static.pl --json $(which scandeps-static.pl)
+ scandeps-static --json lib/Some/Module.pm
 
 I<Use the C<find-requires> script included in this distribution to
 recurse directories and create dependency files like C<cpanfile>>.
@@ -1012,7 +1088,8 @@ character.
 
 For the purposes of this module, dependencies are identified by
 looking for Perl modules and other Perl artifacts declared using
-C<use>, C<require>, C<parent>, or C<base>.
+C<use>, C<require>, C<parent>, or C<base>. The script will also
+consider Moo/Role::Tiny modules include using C<with>.
 
 If the module contains a C<require> statement, by default the
 C<require> must be flush up against the left edge of your script

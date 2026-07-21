@@ -1,9 +1,8 @@
 +Pod::Find 0
 +Progress::Any::Output::TermProgressBarColor 
-CLI::Simple 2.1.0
+CLI::Simple 2.1.1
 CLI::Simple::Constants 2.1.1
 CLI::Simple::Utils 2.1.1
-Class::Accessor::Fast 0.51
 IO::Scalar 2.113
 JSON 4.10
 Progress::Any 0.220
