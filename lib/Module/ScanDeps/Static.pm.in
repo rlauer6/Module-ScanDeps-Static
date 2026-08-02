@@ -88,6 +88,21 @@ sub min_core_version {
   return version->parse($min_core_version)->numify;
 }
 
+Readonly::Hash our %PRAGMA => map { ( $_ => 1 ) } qw(
+  strict warnings vars lib feature utf8 bytes integer diagnostics
+  sort subs re mro locale open less filetest attributes autouse
+);
+
+########################################################################
+sub is_pragma {
+########################################################################
+  my ( $self, $module_w_version ) = @_;
+
+  my ($module) = split /\s/xsm, $module_w_version;
+
+  return $PRAGMA{$module} ? $TRUE : $FALSE;
+}
+
 ########################################################################
 sub is_core {
 ########################################################################
@@ -387,12 +402,15 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
           ? substr( $whole_text, $stmt_end, $newline_pos - $stmt_end )
           : substr( $whole_text, $stmt_end );
 
-        if ( $rest =~ /\A\s*\#\#\s*scandeps:\s*(suggests|recommends)\b/xsm ) {
+        if ( $rest =~ /\A\s*\#\#\s*scandeps:\s*(requires|recommends|suggests)\b/xsm ) {
           $tier = $1;
         }
       }
 
-      my $adder = $tier eq 'recommends' ? 'add_recommends' : 'add_suggests';
+      my $adder
+        = $tier eq 'requires'   ? 'add_require'
+        : $tier eq 'recommends' ? 'add_recommends'
+        :                         'add_suggests';
 
       while ( $body =~ /\b(?:require|use)\s+([\w:]+)(?:\s+([\d.]+))?/gxsm ) {
         $self->$adder( $1, $2 );
@@ -644,21 +662,21 @@ sub parse {
 }
 
 ########################################################################
-#
+########################################################################
 # To be honest, I'm really not sure what the code below should do
 # other than simply put the version number in the hash. I can only
 # surmise that if the original script was running in the context of a
 # list of perl scripts in a project AND one script specified an older
 # version of a module, then that version is replace with the newer
 # version.
-#
+########################################################################
 # In our implementation here, the typical use case (I think) will be
 # for an instance of Module::ScanDeps::Static to parse one
 # script. However, it is possible for the instance to scan multiple
 # files by calling "parse()" iteratively, accumulating the
 # dependencies along the way. In that case this method's actions
 # appear to be relevant.
-#
+########################################################################
 # Thinking through the above use case and the way it is being
 # implemented might indicate a "bug", or at least a design flaw. Take
 # the case where two Perl scripts (presumably in the same project
@@ -667,11 +685,11 @@ sub parse {
 # possible - although one might wonder why the author of these scripts
 # didn't resolve any conflicts between the modules so that he could
 # use one version of said module.
-#
+########################################################################
 # In any event this method enforces a single version of the module
 # (the highest) as the answer to the question what version of
 # __fill_in_the_blank__ module do I require?
-#
+########################################################################
 # The original method did not attempt to find the version of the
 # module on the system where this script was being executed. This
 # implementation does try to do that if you've sent the "add_version"
@@ -687,6 +705,13 @@ sub add_require {
 
   $module =~ s/\A\s*//xsm;
   $module =~ s/\s*\z//xsm;
+
+  return $self
+    if $self->is_pragma($module);
+
+  # strongest tier wins: a hard requirement supersedes any softer listing
+  delete $self->get_recommends->{$module};
+  delete $self->get_suggests->{$module};
 
   my $require = $self->get_require;
 
@@ -723,6 +748,15 @@ sub add_recommends {
   $module =~ s/\A\s*//xsm;
   $module =~ s/\s*\z//xsm;
 
+  return $self
+    if $self->is_pragma($module);
+
+  # a stronger tier wins: do not downgrade an existing hard requirement
+  return $self
+    if exists $self->get_require->{$module};
+
+  delete $self->get_suggests->{$module};
+
   my $recommends = $self->get_recommends;
 
   my $oldver = $recommends->{$module};
@@ -757,6 +791,14 @@ sub add_suggests {
 
   $module =~ s/\A\s*//xsm;
   $module =~ s/\s*\z//xsm;
+
+  return $self
+    if $self->is_pragma($module);
+
+  # a stronger tier wins: do not add if already required or recommended
+  return $self
+    if exists $self->get_require->{$module}
+    || exists $self->get_recommends->{$module};
 
   my $suggests = $self->get_suggests;
 

@@ -760,7 +760,7 @@ the module is added more than once. Returns <code>$self</code>.</p>
 Perl version requirement). Core modules are omitted when <code>core</code> is
 false.</p>
 <a id="version" class="anchor" aria-label="Permalink: VERSION" href="#version"><span aria-hidden="true" class="octicon octicon-link"></span></a><h1 class="heading-element">VERSION</h1>
-<p>This documentation refers to version 1.9.2</p>
+<p>This documentation refers to version 1.9.3</p>
 <a id="author" class="anchor" aria-label="Permalink: AUTHOR" href="#author"><span aria-hidden="true" class="octicon octicon-link"></span></a><h1 class="heading-element">AUTHOR</h1>
 <p>This module is largely a lift and drop of Ken Este's <code>perl.req</code> script
 lifted from rpm build tools.</p>
