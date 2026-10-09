@@ -554,16 +554,11 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
     # the module an empty list.
     $module =~ s/[(]\s*[)]$//xsm;
 
-    if ( $module =~ /\Av?([\d._]+)\z/xsm ) {
-      # if module is a number then both require and use interpret that
-      # to mean that a particular version of perl is specified
-
-      my $ver = $1;
-
-      $self->get_perlreq->{'perl'} = $ver;
-
+    if ( $module =~ /\A(v?[\d._]+)\z/xsm ) {  # v now captured, not stripped
+      my $ver        = $1;
+      my $normalized = eval { version->parse($ver)->numify };  # -> 5.024000
+      $self->get_perlreq->{'perl'} = $normalized // $ver;
       return $line;
-
     }
 
     # ph files do not use the package name inside the file.
@@ -985,7 +980,7 @@ sub to_rpm {
 ########################################################################
 sub _extra_options {
 ########################################################################
-  return [qw(perlreq require recommends suggests handle files packages)];
+  return [qw(perlreq require recommends suggests handle files packages logger)];
 }
 
 ########################################################################
@@ -998,7 +993,7 @@ sub _option_specs {
       help|h
       include-require|i!
       json|j
-      log-level|l
+      log-level|l=s
       min-core-version|m=s
       raw|r
       recommend-require|R!
@@ -1198,11 +1193,38 @@ sub init {
 }
 
 ########################################################################
+sub logger {
+########################################################################
+  my ( $self, $level, $message, @args ) = @_;
+
+  my $logger = $self->get_logger;
+
+  if (@args) {
+    $message = sprintf $message, @args;
+  }
+
+  if ( !$logger ) {
+    # we only support 'info' & 'debug' so this should work...
+    return
+      if !$self->get_log_level || $level ne $self->get_log_level;
+
+    print {*STDERR} "$message\n";
+
+    return;
+  }
+
+  $logger->$level($message);
+
+  return;
+}
+
+########################################################################
 sub cmd_scan {
 ########################################################################
   my ($self) = @_;
 
   foreach my $file ( @{ $self->get_files } ) {
+    $self->logger( info => 'scanning: %s', $file );
     $self->set_path($file);
 
     $self->parse;
