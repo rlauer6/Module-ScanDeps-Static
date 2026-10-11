@@ -138,6 +138,9 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 ########################################################################
   my ( $self, $line ) = @_;
 
+  return $line
+    if $line =~ /\A\s*\#/xsm;
+
   my $fh = $self->get_handle;
 
   # track this file's own package declarations, for optional
@@ -170,7 +173,8 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
   # within the quote, nor an escaped hash mark that isn't a comment
   # marker, such as occurs right here. Draw the line somewhere.
   if ( $line =~ /\A.*\Wq[qxwr]?\s*([{([#|\/])[^})\]#|\/]*$/xsm
-    && $line !~ /\A\s*require|use\s/xsm ) {
+    && $line !~ /\A\s*(?:require|use)\s/xsm ) {
+
     my $tag = $1;
 
     $tag =~ tr/{\(\[\#|\//})]#|\//;
@@ -352,7 +356,9 @@ sub parse_line { ## no critic (Subroutines::ProhibitExcessComplexity)
 
     if ( !$depth ) {
       my $eval_close = $pos;
-      my $body       = substr $whole_text, $body_start, $eval_close - $body_start;
+
+      my $body = substr $whole_text, $body_start, $eval_close - $body_start;
+      $body =~ s/^\s*\#.*$//mg;
 
       # find where the WHOLE STATEMENT ends -- the next ';' that
       # occurs while not nested inside any (further) brace. This one

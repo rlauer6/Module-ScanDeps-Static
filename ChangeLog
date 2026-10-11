@@ -1,3 +1,33 @@
+Sun Oct 11 08:42:17 2026  Rob Lauer  <rclauer@gmail.com>
+
+	[1.9.5]:
+	* VERSION: bump
+	* README.md: generated
+	* .gitignore: + *.vars
+	* cpanfile
+	- + List::Util 1.33
+	* requires: likewise
+	* lib/Module/ScanDeps/Static.pm.in
+	(parse_line)
+	- skip full-line comments before dependency parsing
+	- correct use/require exclusion regex in quoted expression handling
+	- remove commented lines from eval bodies before scanning dependencies
+	* t/01-scandeps.t
+	- add regression tests for commented use/require statements
+	* t/03-suggests-recommends.t
+	- add regression tests for commented dependencies in eval blocks
+	* .includes/test.mk
+	- add test dependency generation rules
+	- use SOURCE_FILES instead of GSOURCE_FILES for test prerequisites
+	* .includes/local.mk
+	- move test-requires.cpanfile recipe to test.mk
+	* .includes/update.mk
+	- define INCLUDES_DIR and BOOTSTRAPPER_DIST_DIR
+	* Makefile
+	- skip local dependency installation for tarball builds with SKIP_TESTS
+	- remove --log-level info from test dependency scanning
+	- reconcile missing dependency files without requiring a rescan
+
 Fri Oct  9 09:10:02 2026  Rob Lauer  <rclauer@gmail.com>
 
 	[1.9.4]:
