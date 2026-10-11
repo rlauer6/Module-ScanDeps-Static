@@ -1,3 +1,4 @@
++List::Util 1.33
 +Pod::Find 0
 +Progress::Any::Output::TermProgressBarColor 0
 CLI::Simple 2.1.1

@@ -12,6 +12,7 @@ test.t.tmpl
 \#*
 *.diffs
 *.lst
+*.vars
 extra-files
 provides
 resources

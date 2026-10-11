@@ -830,7 +830,7 @@ false.
 
 # VERSION
 
-This documentation refers to version 1.9.4
+This documentation refers to version 1.9.5
 
 # AUTHOR
 

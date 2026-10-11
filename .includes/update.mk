@@ -1,5 +1,8 @@
 #-*- mode: makefile; -*-
 
+INCLUDES_DIR = .includes/
+BOOTSTRAPPER_DIST_DIR = $(shell perl -MFile::ShareDir=dist_dir -e 'print dist_dir("CPAN-Maker-Bootstrapper");')
+
 MANAGED_SOURCE_FILES = \
    Makefile.txt \
    builder \
@@ -9,8 +12,11 @@ MANAGED_SOURCE_FILES = \
 MANIFEST: $(INCLUDES_FILES) $(MANAGED_SOURCE_FILES)
 	$(NO_ECHO)printf "%s\n" $(MANAGED_MK_FILES) $(MANAGED_SOURCE_FILES) | sort > $@
 
-.PHONY: post-update
-post-update: 
+.PHONY: post-update pre-update
+
+pre-update::
+
+post-update:: pre-update
 	$(NO_ECHO)mkdir -p $(INCLUDES_DIR); \
 	for f in $(MANAGED_MK_FILES); do \
 	  src="$(BOOTSTRAPPER_DIST_DIR)/$$f"; \
@@ -27,10 +33,14 @@ post-update:
 	  echo "updating .gitignore..."; \
 	  comm -13 $$their_ignore $$our_ignore | tee -a .gitignore; \
 	fi; \
-	echo "Files updated. Review changes with: git diff"
+	chmod +w Makefile; \
+	cp $(BOOTSTRAPPER_DIST_DIR)/Makefile.txt Makefile; \
+	chmod -w Makefile .includes/*; \
+	echo "Update complete. Review changes with: git diff"
 
 .PHONY: update  ## update managed project files from the installed bootstrapper
 update:
+	$(MAKE) pre-update
 	$(NO_ECHO)if [[ -e builder ]]; then \
 	  chmod +w builder; \
 	  cp $(BOOTSTRAPPER_DIST_DIR)/builder builder; \
@@ -39,10 +49,7 @@ update:
 	chmod +w .includes/*; \
 	cp $(BOOTSTRAPPER_DIST_DIR)/update.mk .includes/; \
 	cp $(BOOTSTRAPPER_DIST_DIR)/upgrade.mk .includes/; \
-	$(MAKE) post-update; \
-	chmod +w Makefile; \
-	cp $(BOOTSTRAPPER_DIST_DIR)/Makefile.txt Makefile; \
-	chmod -w Makefile .includes/*
+	$(MAKE) post-update
 
 .PHONY: update-available
 update-available:

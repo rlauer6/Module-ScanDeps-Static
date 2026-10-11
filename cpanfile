@@ -1,6 +1,7 @@
 requires "CLI::Simple", "2.1.1";
 requires "IO::Scalar", "2.113";
 requires "JSON", "4.10";
+requires "List::Util", "1.33";
 requires "Pod::Find", "0";
 requires "Progress::Any", "0.220";
 requires "Progress::Any::Output::TermProgressBarColor", "0";
